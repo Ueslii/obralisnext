@@ -1,79 +1,34 @@
-import { Users, Plus, Briefcase, DollarSign, UserPlus } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Briefcase, DollarSign, Edit, Trash2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-
-const equipes = [
-  {
-    id: 1,
-    name: "Carlos Roberto",
-    role: "Engenheiro Civil",
-    valorHora: "R$ 150",
-    obra: "Residencial Vista Verde",
-    status: "Ativo",
-    initials: "CR",
-  },
-  {
-    id: 2,
-    name: "Maria Santos",
-    role: "Mestre de Obras",
-    valorHora: "R$ 85",
-    obra: "Edifício Comercial Central",
-    status: "Ativo",
-    initials: "MS",
-  },
-  {
-    id: 3,
-    name: "João Silva",
-    role: "Pedreiro",
-    valorHora: "R$ 45",
-    obra: "Residencial Vista Verde",
-    status: "Ativo",
-    initials: "JS",
-  },
-  {
-    id: 4,
-    name: "Ana Paula",
-    role: "Arquiteta",
-    valorHora: "R$ 120",
-    obra: "Obra Industrial Norte",
-    status: "Férias",
-    initials: "AP",
-  },
-  {
-    id: 5,
-    name: "Pedro Oliveira",
-    role: "Eletricista",
-    valorHora: "R$ 55",
-    obra: "Edifício Comercial Central",
-    status: "Ativo",
-    initials: "PO",
-  },
-  {
-    id: 6,
-    name: "Fernanda Costa",
-    role: "Encanadora",
-    valorHora: "R$ 50",
-    obra: "Residencial Vista Verde",
-    status: "Ativo",
-    initials: "FC",
-  },
-];
+import { useEquipes } from "@/hooks/useEquipes";
+import { MembroDialog } from "@/components/equipes/MembroDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 export default function Equipes() {
+  const { membros, addMembro, updateMembro, deleteMembro, calcularFolhaPagamento } = useEquipes();
+  const [busca, setBusca] = useState("");
+
+  const membrosFiltrados = membros.filter(m => 
+    m.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    m.funcao.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  const totalAtivos = membros.filter(m => m.status === 'ativo').length;
+  const folhaMensal = calcularFolhaPagamento();
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">Equipes</h1>
           <p className="text-muted-foreground">Gerencie funcionários e folha de pagamento</p>
         </div>
-        <Button className="gradient-primary gap-2">
-          <UserPlus className="h-4 w-4" />
-          Adicionar Funcionário
-        </Button>
+        <MembroDialog onSave={addMembro} />
       </div>
 
       {/* Stats */}
@@ -86,7 +41,7 @@ export default function Equipes() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total de Funcionários</p>
-                <p className="text-2xl font-mono font-bold">156</p>
+                <p className="text-2xl font-mono font-bold">{membros.length}</p>
               </div>
             </div>
           </CardContent>
@@ -99,7 +54,7 @@ export default function Equipes() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Ativos</p>
-                <p className="text-2xl font-mono font-bold">142</p>
+                <p className="text-2xl font-mono font-bold">{totalAtivos}</p>
               </div>
             </div>
           </CardContent>
@@ -112,46 +67,65 @@ export default function Equipes() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Folha Mensal</p>
-                <p className="text-2xl font-mono font-bold">R$ 520K</p>
+                <p className="text-2xl font-mono font-bold">R$ {(folhaMensal / 1000).toFixed(0)}K</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search */}
-      <Input placeholder="Buscar funcionário..." className="max-w-md" />
+      <Input placeholder="Buscar funcionário..." className="max-w-md" value={busca} onChange={(e) => setBusca(e.target.value)} />
 
       {/* Team Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {equipes.map((membro) => (
-          <Card key={membro.id} className="card-hover">
+        {membrosFiltrados.map((membro) => (
+          <Card key={membro.id} className="card-hover group">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <Avatar className="h-14 w-14">
                   <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-lg">
-                    {membro.initials}
+                    {membro.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h3 className="font-semibold truncate">{membro.name}</h3>
-                      <p className="text-sm text-muted-foreground">{membro.role}</p>
+                      <h3 className="font-semibold truncate">{membro.nome}</h3>
+                      <p className="text-sm text-muted-foreground">{membro.funcao}</p>
                     </div>
-                    <Badge variant={membro.status === "Ativo" ? "default" : "secondary"}>
-                      {membro.status}
+                    <Badge variant={membro.status === "ativo" ? "default" : "secondary"}>
+                      {membro.status === 'ativo' ? 'Ativo' : membro.status === 'ferias' ? 'Férias' : 'Inativo'}
                     </Badge>
                   </div>
                   <div className="space-y-2 mt-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Valor/hora</span>
-                      <span className="font-mono font-semibold">{membro.valorHora}</span>
+                      <span className="font-mono font-semibold">R$ {membro.valorHora}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Obra</span>
-                      <span className="font-medium truncate ml-2">{membro.obra}</span>
-                    </div>
+                    {membro.obraAtual && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Obra</span>
+                        <span className="font-medium truncate ml-2">{membro.obraAtual}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MembroDialog membro={membro} onSave={(dados) => updateMembro(membro.id, dados)} trigger={<Button size="sm" variant="outline" className="flex-1"><Edit className="h-3 w-3 mr-1" />Editar</Button>} />
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive"><Trash2 className="h-3 w-3" /></Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir funcionário?</AlertDialogTitle>
+                          <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteMembro(membro.id)} className="bg-destructive">Excluir</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </div>

@@ -6,19 +6,47 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import authBackground from "@/assets/auth-background.jpg";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate login
-    setTimeout(() => {
+    const success = await login(email, password);
+    
+    if (success) {
+      toast({
+        title: "Bem-vindo!",
+        description: "Login realizado com sucesso",
+      });
       navigate("/");
-    }, 1000);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Credenciais inválidas",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -60,6 +88,8 @@ export default function Auth() {
                       id="email"
                       type="email"
                       placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -69,6 +99,8 @@ export default function Auth() {
                       id="password"
                       type="password"
                       placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                     />
                   </div>

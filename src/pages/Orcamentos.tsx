@@ -1,133 +1,24 @@
-import { Calculator, FileText, DollarSign, TrendingUp } from "lucide-react";
+import { Calculator, FileText, DollarSign, TrendingUp, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useOrcamentos } from "@/hooks/useOrcamentos";
+import { OrcamentoDialog } from "@/components/orcamentos/OrcamentoDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Orcamentos() {
+  const { orcamentos, addOrcamento, updateOrcamento, deleteOrcamento } = useOrcamentos();
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Orçamentos</h1>
-        <p className="text-muted-foreground">Calcule custos e gere orçamentos detalhados</p>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Orçamentos</h1>
+          <p className="text-muted-foreground">Calcule custos e gere orçamentos detalhados</p>
+        </div>
+        <OrcamentoDialog onSave={addOrcamento} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Calculator Form */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-primary" />
-              Calculadora de Orçamento
-            </CardTitle>
-            <CardDescription>Preencha os dados para calcular o custo estimado</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo da Obra</Label>
-                <Select>
-                  <SelectTrigger id="tipo">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="residencial">Residencial</SelectItem>
-                    <SelectItem value="comercial">Comercial</SelectItem>
-                    <SelectItem value="industrial">Industrial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="area">Área (m²)</Label>
-                <Input id="area" type="number" placeholder="1500" />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Custos Estimados</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="materiais">Materiais (R$/m²)</Label>
-                  <Input id="materiais" type="number" placeholder="650" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mao-obra">Mão de Obra (R$/m²)</Label>
-                  <Input id="mao-obra" type="number" placeholder="350" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="logistica">Logística (R$/m²)</Label>
-                  <Input id="logistica" type="number" placeholder="120" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="equipamentos">Equipamentos (R$/m²)</Label>
-                  <Input id="equipamentos" type="number" placeholder="180" />
-                </div>
-              </div>
-            </div>
-
-            <Button className="w-full gradient-primary">
-              Calcular Orçamento
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Result */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              Resultado
-            </CardTitle>
-            <CardDescription>Valor total estimado</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted">
-                <p className="text-sm text-muted-foreground mb-1">Custo por m²</p>
-                <p className="text-2xl font-mono font-bold">R$ 1.300,00</p>
-              </div>
-
-              <div className="p-6 rounded-lg bg-primary/10 border-2 border-primary/20">
-                <p className="text-sm text-muted-foreground mb-1">Total Estimado</p>
-                <p className="text-3xl font-mono font-bold text-primary">R$ 1.950.000</p>
-              </div>
-
-              <div className="space-y-3 pt-4 border-t border-border">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Materiais</span>
-                  <span className="font-mono font-semibold">R$ 975.000</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Mão de Obra</span>
-                  <span className="font-mono font-semibold">R$ 525.000</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Logística</span>
-                  <span className="font-mono font-semibold">R$ 180.000</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Equipamentos</span>
-                  <span className="font-mono font-semibold">R$ 270.000</span>
-                </div>
-              </div>
-            </div>
-
-            <Button variant="outline" className="w-full gap-2">
-              <FileText className="h-4 w-4" />
-              Gerar PDF
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Budgets */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -137,17 +28,40 @@ export default function Orcamentos() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { name: "Residencial Vista Verde", value: "R$ 2.400.000", date: "15/10/2024" },
-              { name: "Edifício Comercial Central", value: "R$ 3.800.000", date: "12/10/2024" },
-              { name: "Obra Industrial Norte", value: "R$ 5.200.000", date: "08/10/2024" },
-            ].map((budget, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors">
-                <div>
-                  <p className="font-medium">{budget.name}</p>
-                  <p className="text-sm text-muted-foreground">{budget.date}</p>
+            {orcamentos.map((orc) => (
+              <div key={orc.id} className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors group">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <p className="font-medium">{orc.nomeObra}</p>
+                    <Badge variant={orc.status === 'aprovado' ? 'default' : orc.status === 'rascunho' ? 'outline' : 'secondary'}>
+                      {orc.status === 'aprovado' ? 'Aprovado' : orc.status === 'rascunho' ? 'Rascunho' : 'Revisão'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(orc.dataEmissao).toLocaleDateString('pt-BR')} • {orc.area}m² • {orc.itens.length} etapas
+                  </p>
                 </div>
-                <p className="font-mono font-semibold text-lg">{budget.value}</p>
+                <div className="flex items-center gap-3">
+                  <p className="font-mono font-semibold text-lg">R$ {orc.custoTotal.toLocaleString('pt-BR')}</p>
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <OrcamentoDialog orcamento={orc} onSave={(dados) => updateOrcamento(orc.id, dados)} trigger={<Button size="sm" variant="outline"><Edit className="h-3 w-3" /></Button>} />
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive"><Trash2 className="h-3 w-3" /></Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir orçamento?</AlertDialogTitle>
+                          <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteOrcamento(orc.id)} className="bg-destructive">Excluir</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
