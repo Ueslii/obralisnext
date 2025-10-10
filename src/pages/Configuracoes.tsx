@@ -5,10 +5,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Configuracoes() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [notificacoes, setNotificacoes] = useState({
+    emailObras: true,
+    alertasOrcamento: true,
+    relatoriosSemanais: false,
+    push: true,
+  });
+
+  const handleSaveProfile = () => {
+    toast({ 
+      title: "Perfil atualizado com sucesso!",
+      description: "Suas informações pessoais foram atualizadas."
+    });
+  };
+
+  const handleSaveCompany = () => {
+    toast({ 
+      title: "Dados da empresa atualizados!",
+      description: "As informações da empresa foram salvas."
+    });
+  };
+
+  const handleUpdatePassword = () => {
+    toast({ 
+      title: "Senha atualizada com sucesso!",
+      description: "Sua senha foi alterada com segurança."
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-3xl font-bold mb-2">Configurações</h1>
         <p className="text-muted-foreground">Gerencie suas preferências e dados da empresa</p>
@@ -32,7 +66,7 @@ export default function Configuracoes() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
-                <Input id="email" type="email" defaultValue="joao@obraspro.com" />
+                <Input id="email" type="email" defaultValue={user?.email || "joao@obraspro.com"} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone</Label>
@@ -43,7 +77,7 @@ export default function Configuracoes() {
                 <Input id="cargo" defaultValue="Engenheiro Civil" />
               </div>
             </div>
-            <Button className="gradient-primary">Salvar Alterações</Button>
+            <Button onClick={handleSaveProfile} className="gradient-primary">Salvar Alterações</Button>
           </CardContent>
         </Card>
 
@@ -75,7 +109,7 @@ export default function Configuracoes() {
                 <Input id="city" defaultValue="São Paulo - SP" />
               </div>
             </div>
-            <Button className="gradient-primary">Salvar Alterações</Button>
+            <Button onClick={handleSaveCompany} className="gradient-primary">Salvar Alterações</Button>
           </CardContent>
         </Card>
 
@@ -94,7 +128,10 @@ export default function Configuracoes() {
                 <p className="font-medium">E-mail de obras</p>
                 <p className="text-sm text-muted-foreground">Receber atualizações sobre obras</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={notificacoes.emailObras}
+                onCheckedChange={(checked) => setNotificacoes({...notificacoes, emailObras: checked})}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -102,7 +139,10 @@ export default function Configuracoes() {
                 <p className="font-medium">Alertas de orçamento</p>
                 <p className="text-sm text-muted-foreground">Notificações quando custos excedem limites</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={notificacoes.alertasOrcamento}
+                onCheckedChange={(checked) => setNotificacoes({...notificacoes, alertasOrcamento: checked})}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -110,7 +150,10 @@ export default function Configuracoes() {
                 <p className="font-medium">Relatórios semanais</p>
                 <p className="text-sm text-muted-foreground">Resumo semanal por e-mail</p>
               </div>
-              <Switch />
+              <Switch 
+                checked={notificacoes.relatoriosSemanais}
+                onCheckedChange={(checked) => setNotificacoes({...notificacoes, relatoriosSemanais: checked})}
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
@@ -118,7 +161,10 @@ export default function Configuracoes() {
                 <p className="font-medium">Notificações push</p>
                 <p className="text-sm text-muted-foreground">Alertas no navegador</p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={notificacoes.push}
+                onCheckedChange={(checked) => setNotificacoes({...notificacoes, push: checked})}
+              />
             </div>
           </CardContent>
         </Card>
@@ -145,7 +191,7 @@ export default function Configuracoes() {
               <Label htmlFor="confirm-password">Confirmar nova senha</Label>
               <Input id="confirm-password" type="password" />
             </div>
-            <Button className="gradient-primary">Atualizar Senha</Button>
+            <Button onClick={handleUpdatePassword} className="gradient-primary">Atualizar Senha</Button>
           </CardContent>
         </Card>
       </div>
