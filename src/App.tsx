@@ -7,8 +7,10 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Obras from "./pages/Obras";
+import Financeiro from "./pages/Financeiro";
 import Orcamentos from "./pages/Orcamentos";
 import Equipes from "./pages/Equipes";
+import Alertas from "./pages/Alertas";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import Auth from "./pages/Auth";
@@ -32,8 +34,10 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
             <Route path="/obras" element={<ProtectedRoute><DashboardLayout><Obras /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/financeiro" element={<ProtectedRoute><DashboardLayout><Financeiro /></DashboardLayout></ProtectedRoute>} />
             <Route path="/orcamentos" element={<ProtectedRoute><DashboardLayout><Orcamentos /></DashboardLayout></ProtectedRoute>} />
             <Route path="/equipes" element={<ProtectedRoute><DashboardLayout><Equipes /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/alertas" element={<ProtectedRoute><DashboardLayout><Alertas /></DashboardLayout></ProtectedRoute>} />
             <Route path="/relatorios" element={<ProtectedRoute><DashboardLayout><Relatorios /></DashboardLayout></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><DashboardLayout><Configuracoes /></DashboardLayout></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

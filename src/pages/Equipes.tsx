@@ -25,8 +25,8 @@ export default function Equipes() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Equipes</h1>
-          <p className="text-muted-foreground">Gerencie funcionários e folha de pagamento</p>
+          <h1 className="text-3xl font-bold mb-2">👷 RH e Equipes</h1>
+          <p className="text-muted-foreground">Gerencie funcionários, folha de pagamento e horas extras</p>
         </div>
         <MembroDialog onSave={addMembro} />
       </div>
@@ -101,6 +101,10 @@ export default function Equipes() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Valor/hora</span>
                       <span className="font-mono font-semibold">R$ {membro.valorHora}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Mensal (160h)</span>
+                      <span className="font-mono font-semibold text-primary">R$ {(membro.valorHora * 160).toLocaleString('pt-BR')}</span>
                     </div>
                     {membro.obraAtual && (
                       <div className="flex items-center justify-between text-sm">

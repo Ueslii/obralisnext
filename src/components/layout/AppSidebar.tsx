@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, Calculator, Users, FileBarChart, Settings, HardHat } from "lucide-react";
+import { Building2, LayoutDashboard, Calculator, Users, FileBarChart, Settings, HardHat, DollarSign, AlertTriangle } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -15,8 +15,10 @@ import {
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Obras", url: "/obras", icon: Building2 },
+  { title: "Financeiro", url: "/financeiro", icon: DollarSign },
   { title: "Orçamentos", url: "/orcamentos", icon: Calculator },
   { title: "Equipes", url: "/equipes", icon: Users },
+  { title: "Alertas", url: "/alertas", icon: AlertTriangle },
   { title: "Relatórios", url: "/relatorios", icon: FileBarChart },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
@@ -35,7 +37,7 @@ export function AppSidebar() {
             </div>
             {!isCollapsed && (
               <div className="flex flex-col">
-                <h1 className="text-lg font-bold text-foreground">ObrasPro</h1>
+                <h1 className="text-lg font-bold text-foreground">BuildWise</h1>
                 <p className="text-xs text-muted-foreground">Gestão Inteligente</p>
               </div>
             )}

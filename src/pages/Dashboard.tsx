@@ -1,4 +1,4 @@
-import { Building2, CheckCircle2, DollarSign, Users, TrendingUp, Clock } from "lucide-react";
+import { Building2, CheckCircle2, DollarSign, Users, TrendingUp, Clock, AlertTriangle, Wallet } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -6,17 +6,30 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useObras } from "@/hooks/useObras";
 import { useEquipes } from "@/hooks/useEquipes";
+import { useFinanceiro } from "@/hooks/useFinanceiro";
+import { useAlertas } from "@/hooks/useAlertas";
 import constructionHero from "@/assets/construction-hero.jpg";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { obras } = useObras();
   const { membros, calcularFolhaPagamento } = useEquipes();
+  const { getResumoFinanceiro, lancamentos } = useFinanceiro();
+  const { getAlertasNaoLidos } = useAlertas();
 
   const obrasEmAndamento = obras.filter(o => o.status === 'em_andamento');
   const obrasConcluidas = obras.filter(o => o.status === 'concluida');
   const custoTotalMensal = obras.reduce((acc, o) => acc + o.custoReal, 0);
   const folhaPagamento = calcularFolhaPagamento();
+  const { totalDespesas, saldo } = getResumoFinanceiro();
+  const alertasAtivos = getAlertasNaoLidos().length;
+  
+  // Despesas da última semana
+  const ultimaSemana = new Date();
+  ultimaSemana.setDate(ultimaSemana.getDate() - 7);
+  const despesasSemanais = lancamentos
+    .filter(l => l.tipo === 'despesa' && new Date(l.data) >= ultimaSemana)
+    .reduce((acc, l) => acc + l.valor, 0);
 
   // Distribuição de custos simulada
   const custoMateriais = custoTotalMensal * 0.40;
@@ -35,8 +48,8 @@ export default function Dashboard() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 to-foreground/60 flex items-center">
           <div className="px-8 text-primary-foreground">
-            <h1 className="text-3xl font-bold mb-2">Bem-vindo ao ObrasPro</h1>
-            <p className="text-primary-foreground/90">Gerencie suas obras com eficiência e precisão</p>
+            <h1 className="text-3xl font-bold mb-2">Bem-vindo ao BuildWise</h1>
+            <p className="text-primary-foreground/90">Gestão Inteligente de Obras</p>
           </div>
         </div>
       </div>
@@ -50,23 +63,43 @@ export default function Dashboard() {
           trend={{ value: `${obras.length} total`, positive: true }}
         />
         <StatCard
-          title="Obras Concluídas"
-          value={obrasConcluidas.length.toString()}
-          icon={CheckCircle2}
-          trend={{ value: `${Math.round((obrasConcluidas.length / obras.length) * 100)}% do total`, positive: true }}
+          title="Saldo Atual"
+          value={`R$ ${(saldo / 1000).toFixed(0)}k`}
+          icon={Wallet}
+          trend={{ value: saldo >= 0 ? 'Positivo' : 'Negativo', positive: saldo >= 0 }}
         />
         <StatCard
-          title="Custo Total Mensal"
-          value={`R$ ${(custoTotalMensal / 1000000).toFixed(1)}M`}
+          title="Despesas Semanais"
+          value={`R$ ${(despesasSemanais / 1000).toFixed(0)}k`}
           icon={DollarSign}
-          trend={{ value: `${obras.length} obras ativas`, positive: false }}
+          trend={{ value: 'Últimos 7 dias', positive: false }}
         />
         <StatCard
-          title="Equipe Ativa"
-          value={membros.filter(m => m.status === 'ativo').length.toString()}
-          icon={Users}
-          trend={{ value: `${membros.length} total`, positive: true }}
+          title="Alertas Ativos"
+          value={alertasAtivos.toString()}
+          icon={AlertTriangle}
+          trend={{ value: alertasAtivos > 0 ? 'Requer atenção' : 'Tudo em dia', positive: alertasAtivos === 0 }}
         />
+      </div>
+
+      {/* Atalhos Rápidos */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => navigate('/financeiro')}>
+          <DollarSign className="h-6 w-6 text-primary" />
+          <span>Financeiro</span>
+        </Button>
+        <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => navigate('/equipes')}>
+          <Users className="h-6 w-6 text-primary" />
+          <span>RH e Equipes</span>
+        </Button>
+        <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => navigate('/alertas')}>
+          <AlertTriangle className="h-6 w-6 text-primary" />
+          <span>Alertas</span>
+        </Button>
+        <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => navigate('/orcamentos')}>
+          <TrendingUp className="h-6 w-6 text-primary" />
+          <span>Orçamentos</span>
+        </Button>
       </div>
 
       {/* Main Content Grid */}
