@@ -14,16 +14,220 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      fornecedor_entregas: {
+        Row: {
+          created_at: string | null
+          data_entrega_prevista: string | null
+          data_entrega_real: string | null
+          data_pedido: string
+          fornecedor_id: string | null
+          id: string
+          material: string
+          obra_id: string
+          observacoes: string | null
+          quantidade: number
+          status: string | null
+          unidade: string
+          valor_total: number
+        }
+        Insert: {
+          created_at?: string | null
+          data_entrega_prevista?: string | null
+          data_entrega_real?: string | null
+          data_pedido: string
+          fornecedor_id?: string | null
+          id?: string
+          material: string
+          obra_id: string
+          observacoes?: string | null
+          quantidade: number
+          status?: string | null
+          unidade: string
+          valor_total: number
+        }
+        Update: {
+          created_at?: string | null
+          data_entrega_prevista?: string | null
+          data_entrega_real?: string | null
+          data_pedido?: string
+          fornecedor_id?: string | null
+          id?: string
+          material?: string
+          obra_id?: string
+          observacoes?: string | null
+          quantidade?: number
+          status?: string | null
+          unidade?: string
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fornecedor_entregas_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fornecedores: {
+        Row: {
+          ativo: boolean | null
+          cnpj: string | null
+          contato: string | null
+          created_at: string | null
+          email: string | null
+          endereco: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          prazo_medio_dias: number | null
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cnpj?: string | null
+          contato?: string | null
+          created_at?: string | null
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          prazo_medio_dias?: number | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cnpj?: string | null
+          contato?: string | null
+          created_at?: string | null
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          prazo_medio_dias?: number | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      obra_comentarios: {
+        Row: {
+          conteudo: string | null
+          created_at: string | null
+          foto_url: string | null
+          id: string
+          obra_id: string
+          tipo: string | null
+          user_id: string
+        }
+        Insert: {
+          conteudo?: string | null
+          created_at?: string | null
+          foto_url?: string | null
+          id?: string
+          obra_id: string
+          tipo?: string | null
+          user_id: string
+        }
+        Update: {
+          conteudo?: string | null
+          created_at?: string | null
+          foto_url?: string | null
+          id?: string
+          obra_id?: string
+          tipo?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      obra_insumos: {
+        Row: {
+          data_entrada: string | null
+          fornecedor_id: string | null
+          id: string
+          material: string
+          obra_id: string
+          quantidade_total: number
+          quantidade_usada: number | null
+          unidade: string
+          updated_at: string | null
+          valor_unitario: number | null
+        }
+        Insert: {
+          data_entrada?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          material: string
+          obra_id: string
+          quantidade_total: number
+          quantidade_usada?: number | null
+          unidade: string
+          updated_at?: string | null
+          valor_unitario?: number | null
+        }
+        Update: {
+          data_entrada?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          material?: string
+          obra_id?: string
+          quantidade_total?: number
+          quantidade_usada?: number | null
+          unidade?: string
+          updated_at?: string | null
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obra_insumos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "engenheiro" | "gestor" | "responsavel_obra"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +354,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "engenheiro", "gestor", "responsavel_obra"],
+    },
   },
 } as const
