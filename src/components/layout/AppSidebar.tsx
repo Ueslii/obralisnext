@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, Calculator, Users, FileBarChart, Settings, HardHat, DollarSign, AlertTriangle } from "lucide-react";
+import { Building2, LayoutDashboard, Calculator, Users, FileBarChart, Settings, HardHat, DollarSign, AlertTriangle, Truck } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -18,6 +18,7 @@ const menuItems = [
   { title: "Financeiro", url: "/financeiro", icon: DollarSign },
   { title: "Orçamentos", url: "/orcamentos", icon: Calculator },
   { title: "Equipes", url: "/equipes", icon: Users },
+  { title: "Fornecedores", url: "/fornecedores", icon: Truck },
   { title: "Alertas", url: "/alertas", icon: AlertTriangle },
   { title: "Relatórios", url: "/relatorios", icon: FileBarChart },
   { title: "Configurações", url: "/configuracoes", icon: Settings },

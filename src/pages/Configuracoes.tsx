@@ -1,4 +1,4 @@
-import { Settings, User, Building, Bell, Shield } from "lucide-react";
+import { Settings, User, Building, Bell, Shield, Palette, Moon, Sun, Share2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,13 @@ import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/useTheme";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Configuracoes() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { themeMode, accentColor, toggleTheme, changeAccent } = useTheme();
   
   const [notificacoes, setNotificacoes] = useState({
     emailObras: true,
@@ -166,6 +169,64 @@ export default function Configuracoes() {
                 onCheckedChange={(checked) => setNotificacoes({...notificacoes, push: checked})}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Personalização */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5 text-primary" />
+              Personalização de Interface
+            </CardTitle>
+            <CardDescription>Ajuste tema e cores de destaque</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {themeMode === 'light' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                <div>
+                  <p className="font-medium">Modo {themeMode === 'light' ? 'Claro' : 'Escuro'}</p>
+                  <p className="text-sm text-muted-foreground">Alternar entre claro e escuro</p>
+                </div>
+              </div>
+              <Switch checked={themeMode === 'dark'} onCheckedChange={toggleTheme} />
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label>Cor de Destaque</Label>
+              <Select value={accentColor} onValueChange={(v: any) => changeAccent(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="orange">🟠 Laranja Construtivo</SelectItem>
+                  <SelectItem value="blue">🔵 Azul Técnico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Integrações */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-primary" />
+              Integrações
+            </CardTitle>
+            <CardDescription>Conecte com serviços externos</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button variant="outline" className="w-full justify-start">
+              <span className="mr-2">📱</span> Integrar WhatsApp Business
+            </Button>
+            <Button variant="outline" className="w-full justify-start">
+              <span className="mr-2">📊</span> Conectar Google Sheets
+            </Button>
+            <Button variant="outline" className="w-full justify-start">
+              <span className="mr-2">☁️</span> Sincronizar Google Drive
+            </Button>
           </CardContent>
         </Card>
 

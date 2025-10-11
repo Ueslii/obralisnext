@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Building2, MapPin, User, Calendar, Edit, Trash2, Sparkles } from "lucide-react";
+import { Building2, MapPin, User, Calendar, Edit, Trash2, Sparkles, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 export default function Obras() {
   const { obras, addObra, updateObra, deleteObra } = useObras();
+  const navigate = useNavigate();
   const [filtro, setFiltro] = useState("all");
   const [busca, setBusca] = useState("");
 
@@ -123,12 +125,15 @@ export default function Obras() {
                 </div>
 
                 <div className="flex items-center gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/obras/${obra.id}`)}>
+                    <Eye className="h-3 w-3 mr-1" />
+                    Detalhes
+                  </Button>
                   <AssistenteDialog 
                     contexto={obra}
                     trigger={
-                      <Button size="sm" variant="outline" className="flex-1">
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        IA
+                      <Button size="sm" variant="outline">
+                        <Sparkles className="h-3 w-3" />
                       </Button>
                     }
                   />
@@ -136,9 +141,8 @@ export default function Obras() {
                     obra={obra}
                     onSave={(dados) => updateObra(obra.id, dados)}
                     trigger={
-                      <Button size="sm" variant="outline" className="flex-1">
-                        <Edit className="h-3 w-3 mr-1" />
-                        Editar
+                      <Button size="sm" variant="outline">
+                        <Edit className="h-3 w-3" />
                       </Button>
                     }
                   />
