@@ -38,7 +38,7 @@ export function AppSidebar() {
             </div>
             {!isCollapsed && (
               <div className="flex flex-col">
-                <h1 className="text-lg font-bold text-foreground">BuildWise</h1>
+                <h1 className="text-lg font-bold text-foreground">Obralis</h1>
                 <p className="text-xs text-muted-foreground">Gestão Inteligente</p>
               </div>
             )}

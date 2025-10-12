@@ -8,8 +8,8 @@ export const useTheme = () => {
   const [accentColor, setAccentColor] = useState<AccentColor>('orange');
 
   useEffect(() => {
-    const savedMode = localStorage.getItem('buildwise_theme_mode') as ThemeMode;
-    const savedAccent = localStorage.getItem('buildwise_accent_color') as AccentColor;
+    const savedMode = localStorage.getItem('obralis_theme_mode') as ThemeMode;
+    const savedAccent = localStorage.getItem('obralis_accent_color') as AccentColor;
 
     if (savedMode) {
       setThemeMode(savedMode);
@@ -46,13 +46,13 @@ export const useTheme = () => {
     const newMode = themeMode === 'light' ? 'dark' : 'light';
     setThemeMode(newMode);
     applyThemeMode(newMode);
-    localStorage.setItem('buildwise_theme_mode', newMode);
+    localStorage.setItem('obralis_theme_mode', newMode);
   };
 
   const changeAccent = (color: AccentColor) => {
     setAccentColor(color);
     applyAccentColor(color);
-    localStorage.setItem('buildwise_accent_color', color);
+    localStorage.setItem('obralis_accent_color', color);
   };
 
   return { themeMode, accentColor, toggleTheme, changeAccent };
