@@ -64,7 +64,7 @@ export default function Auth() {
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary mb-4">
             <HardHat className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">ObrasPro</h1>
+          <h1 className="text-3xl font-bold mb-2">Obralis</h1>
           <p className="text-muted-foreground">Gestão Inteligente de Obras</p>
         </div>
 

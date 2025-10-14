@@ -44,12 +44,12 @@ export default function Dashboard() {
         <img 
           src={constructionHero} 
           alt="Obras em andamento" 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover brightness-100 dark:brightness-90"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 to-foreground/60 flex items-center">
-          <div className="px-8 text-primary-foreground">
-            <h1 className="text-3xl font-bold mb-2">Bem-vindo ao BuildWise</h1>
-            <p className="text-primary-foreground/90">Gestão Inteligente de Obras</p>
+        <div className="absolute inset-0 bg-gradient-to-r from-background/90 to-background/60 flex items-center">
+          <div className="px-8">
+            <h1 className="text-3xl font-bold mb-2 text-foreground">Bem-Vindo ao Obralis</h1>
+            <p className="text-muted-foreground">Gestão Inteligente de Obras</p>
           </div>
         </div>
       </div>
