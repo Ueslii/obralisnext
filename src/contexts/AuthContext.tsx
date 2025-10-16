@@ -1,61 +1,127 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 interface User {
   id: string;
   nome: string;
   email: string;
-  tipo: 'admin' | 'usuario';
+  roles: string[];
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, senha: string) => Promise<boolean>;
-  logout: () => void;
+  session: Session | null;
+  signUp: (email: string, password: string, nome: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
   isAuthenticated: boolean;
-  isAdmin: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('obrapro_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // Setup auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        if (session?.user) {
+          // Defer profile fetch to avoid deadlock
+          setTimeout(() => {
+            loadUserProfile(session.user);
+          }, 0);
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        loadUserProfile(session.user);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, senha: string): Promise<boolean> => {
-    // Simulação de login
-    if (email && senha) {
-      const newUser: User = {
-        id: '1',
-        nome: email.split('@')[0],
-        email,
-        tipo: email.includes('admin') ? 'admin' : 'usuario',
-      };
-      setUser(newUser);
-      localStorage.setItem('obrapro_user', JSON.stringify(newUser));
-      return true;
+  const loadUserProfile = async (supabaseUser: SupabaseUser) => {
+    try {
+      // Load profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+      // Load roles
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', supabaseUser.id);
+
+      setUser({
+        id: supabaseUser.id,
+        nome: profile?.nome || supabaseUser.email?.split('@')[0] || 'Usuário',
+        email: supabaseUser.email || '',
+        roles: userRoles?.map(r => r.role) || ['usuario'],
+      });
+    } catch (error) {
+      console.error('Error loading user profile:', error);
     }
-    return false;
   };
 
-  const logout = () => {
+  const signUp = async (email: string, password: string, nome: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          nome,
+        },
+      },
+    });
+
+    return { error };
+  };
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    return { error };
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('obrapro_user');
+    setSession(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        login,
-        logout,
-        isAuthenticated: !!user,
-        isAdmin: user?.tipo === 'admin',
+        session,
+        signUp,
+        signIn,
+        signOut,
+        isAuthenticated: !!session,
+        loading,
       }}
     >
       {children}

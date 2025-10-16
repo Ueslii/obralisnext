@@ -1,52 +1,72 @@
-import { useState } from "react";
-import { HardHat } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { HardHat } from "lucide-react";
 import authBackground from "@/assets/auth-background.jpg";
 
 export default function Auth() {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [senha, setSenha] = useState("");
+  const [nome, setNome] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, signUp, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
-    const success = await login(email, password);
-    
-    if (success) {
-      toast({
-        title: "Bem-vindo!",
-        description: "Login realizado com sucesso",
-      });
-      navigate("/");
-    } else {
-      toast({
-        title: "Erro",
-        description: "Credenciais inválidas",
-        variant: "destructive",
-      });
+
+    try {
+      if (isLogin) {
+        const { error } = await signIn(email, senha);
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            toast.error("Email ou senha inválidos");
+          } else {
+            toast.error(error.message || "Erro ao fazer login");
+          }
+        } else {
+          toast.success("Login realizado com sucesso!");
+          navigate('/dashboard');
+        }
+      } else {
+        if (!email || !senha || !nome) {
+          toast.error("Preencha todos os campos");
+          return;
+        }
+        
+        const { error } = await signUp(email, senha, nome);
+        if (error) {
+          if (error.message.includes('already registered')) {
+            toast.error("Este email já está cadastrado");
+          } else {
+            toast.error(error.message || "Erro ao criar conta");
+          }
+        } else {
+          toast.success("Conta criada com sucesso! Você já está logado.");
+          navigate('/dashboard');
+        }
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      toast.error("Erro inesperado. Tente novamente.");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -74,7 +94,7 @@ export default function Auth() {
             <CardDescription>Entre ou crie sua conta para continuar</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login" className="w-full">
+            <Tabs value={isLogin ? "login" : "signup"} onValueChange={(v) => setIsLogin(v === "login")}>
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="login">Entrar</TabsTrigger>
                 <TabsTrigger value="signup">Cadastrar</TabsTrigger>
@@ -99,8 +119,8 @@ export default function Auth() {
                       id="password"
                       type="password"
                       placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
                       required
                     />
                   </div>
@@ -121,6 +141,8 @@ export default function Auth() {
                       id="name"
                       type="text"
                       placeholder="João da Silva"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
                       required
                     />
                   </div>
@@ -130,6 +152,8 @@ export default function Auth() {
                       id="signup-email"
                       type="email"
                       placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -139,7 +163,10 @@ export default function Auth() {
                       id="signup-password"
                       type="password"
                       placeholder="••••••••"
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
                       required
+                      minLength={6}
                     />
                   </div>
                   <Button type="submit" className="w-full gradient-primary" disabled={isLoading}>
