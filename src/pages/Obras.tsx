@@ -1,194 +1,194 @@
 import { useState } from "react";
-import { Building2, MapPin, User, Calendar, Edit, Trash2, Sparkles, Eye } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { MoreHorizontal, PlusCircle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useObras } from "@/hooks/useObras";
 import { ObraDialog } from "@/components/obras/ObraDialog";
-import { AssistenteDialog } from "@/components/assistente/AssistenteDialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useObras, Obra, NewObra } from "@/hooks/useObras";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Obras() {
-  const { obras, addObra, updateObra, deleteObra } = useObras();
+  const { obras, isLoading, addObra, updateObra, deleteObra } = useObras();
   const navigate = useNavigate();
-  const [filtro, setFiltro] = useState("all");
-  const [busca, setBusca] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [obraSelecionada, setObraSelecionada] = useState<Obra | undefined>(
+    undefined
+  );
 
-  const obrasFiltradas = obras.filter(obra => {
-    const matchFiltro = filtro === "all" || obra.status === filtro;
-    const matchBusca = obra.nome.toLowerCase().includes(busca.toLowerCase()) ||
-                       obra.endereco.toLowerCase().includes(busca.toLowerCase());
-    return matchFiltro && matchBusca;
-  });
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      concluida: "default",
-      atrasada: "destructive",
-      em_andamento: "secondary",
-      planejada: "outline",
-    };
-    return variants[status] || "secondary";
+  const handleOpenDialog = (obra?: Obra) => {
+    setObraSelecionada(obra);
+    setIsDialogOpen(true);
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      concluida: "Concluída",
-      atrasada: "Atrasada",
-      em_andamento: "Em Andamento",
-      planejada: "Planejada",
-    };
-    return labels[status] || status;
+  const handleSave = (dados: NewObra | (Partial<Obra> & { id: string })) => {
+    if ("id" in dados && dados.id) {
+      updateObra(dados as { id: string } & Partial<Obra>);
+    } else {
+      addObra(dados as NewObra);
+    }
+    setIsDialogOpen(false);
   };
+
+  const handleDelete = (id: string) => {
+    deleteObra(id);
+  };
+
+  const statusMap: { [key: string]: string } = {
+    planejada: "Planejada",
+    em_andamento: "Em Andamento",
+    concluida: "Concluída",
+    atrasada: "Atrasada",
+  };
+
+  const renderTableRows = (filteredObras: Obra[]) => (
+    <TableBody>
+      {isLoading ? (
+        Array.from({ length: 5 }).map((_, index) => (
+          <TableRow key={index}>
+            <TableCell colSpan={6}>
+              <Skeleton className="h-8 w-full" />
+            </TableCell>
+          </TableRow>
+        ))
+      ) : filteredObras.length > 0 ? (
+        filteredObras.map((obra) => (
+          <TableRow
+            key={obra.id}
+            onClick={() => navigate(`/obras/${obra.id}`)}
+            className="cursor-pointer"
+          >
+            <TableCell className="font-medium">{obra.nome}</TableCell>
+            <TableCell>{obra.endereco}</TableCell>
+            <TableCell>
+              <Badge>{statusMap[obra.status] || obra.status}</Badge>
+            </TableCell>
+            <TableCell>
+              {new Date(obra.prazo || "").toLocaleDateString()}
+            </TableCell>
+            <TableCell>{obra.progresso}%</TableCell>
+            <TableCell>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0">
+                    <span className="sr-only">Abrir menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleOpenDialog(obra)}>
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigate(`/obras/${obra.id}`)}
+                  >
+                    Ver Detalhes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    onClick={() => handleDelete(obra.id)}
+                  >
+                    Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          </TableRow>
+        ))
+      ) : (
+        <TableRow>
+          <TableCell colSpan={6} className="h-24 text-center">
+            Nenhuma obra encontrada.
+          </TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  );
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Obras</h1>
-          <p className="text-muted-foreground">Gerencie todas as suas obras em um só lugar</p>
-        </div>
-        <ObraDialog onSave={addObra} />
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">
+          Gerenciamento de Obras
+        </h2>
+        <Button onClick={() => handleOpenDialog()}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Criar Nova Obra
+        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-4 md:flex-row">
-        <Input 
-          placeholder="Buscar obra..." 
-          className="md:max-w-xs"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
-        <Select value={filtro} onValueChange={setFiltro}>
-          <SelectTrigger className="md:w-48">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="em_andamento">Em andamento</SelectItem>
-            <SelectItem value="planejada">Planejada</SelectItem>
-            <SelectItem value="concluida">Concluída</SelectItem>
-            <SelectItem value="atrasada">Atrasada</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <Tabs defaultValue="todas">
+        <TabsList>
+          <TabsTrigger value="todas">Todas</TabsTrigger>
+          <TabsTrigger value="em_andamento">Em Andamento</TabsTrigger>
+          <TabsTrigger value="concluidas">Concluídas</TabsTrigger>
+        </TabsList>
 
-      {/* Obras Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {obrasFiltradas.map((obra) => (
-          <Card key={obra.id} className="card-hover group">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-1">{obra.nome}</h3>
-                      <Badge variant={getStatusBadge(obra.status)}>
-                        {getStatusLabel(obra.status)}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span className="line-clamp-1">{obra.endereco}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 flex-shrink-0" />
-                    <span>{obra.responsavel}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 flex-shrink-0" />
-                    <span>Prazo: {new Date(obra.prazo).toLocaleDateString("pt-BR")}</span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Progresso</span>
-                    <span className="text-sm font-mono font-semibold">{obra.progresso}%</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all"
-                      style={{ width: `${obra.progresso}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => navigate(`/obras/${obra.id}`)}>
-                    <Eye className="h-3 w-3 mr-1" />
-                    Detalhes
-                  </Button>
-                  <AssistenteDialog 
-                    contexto={obra}
-                    trigger={
-                      <Button size="sm" variant="outline">
-                        <Sparkles className="h-3 w-3" />
-                      </Button>
-                    }
-                  />
-                  <ObraDialog
-                    obra={obra}
-                    onSave={(dados) => updateObra(obra.id, dados)}
-                    trigger={
-                      <Button size="sm" variant="outline">
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    }
-                  />
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="destructive">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir obra?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta ação não pode ser desfeita. A obra "{obra.nome}" será permanentemente excluída.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteObra(obra.id)} className="bg-destructive">
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {obrasFiltradas.length === 0 && (
         <Card>
-          <CardContent className="p-12 text-center">
-            <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="font-semibold mb-2">Nenhuma obra encontrada</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {busca || filtro !== "all" 
-                ? "Tente ajustar os filtros de busca" 
-                : "Comece criando sua primeira obra"}
-            </p>
-            {!busca && filtro === "all" && (
-              <ObraDialog onSave={addObra} />
-            )}
+          <CardHeader>
+            <CardTitle>Lista de Obras</CardTitle>
+            <CardDescription>
+              Visualize e gerencie todas as suas obras.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Endereço</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Prazo</TableHead>
+                  <TableHead>Progresso</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TabsContent value="todas">{renderTableRows(obras)}</TabsContent>
+              <TabsContent value="em_andamento">
+                {renderTableRows(
+                  obras.filter((o) => o.status === "em_andamento")
+                )}
+              </TabsContent>
+              <TabsContent value="concluidas">
+                {renderTableRows(obras.filter((o) => o.status === "concluida"))}
+              </TabsContent>
+            </Table>
           </CardContent>
         </Card>
+      </Tabs>
+
+      {isDialogOpen && (
+        <ObraDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSave={handleSave}
+          obra={obraSelecionada}
+        />
       )}
     </div>
   );

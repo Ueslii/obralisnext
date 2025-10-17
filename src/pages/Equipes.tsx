@@ -1,142 +1,184 @@
-import { Users, Briefcase, DollarSign, Edit, Trash2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { useEquipes } from "@/hooks/useEquipes";
-import { MembroDialog } from "@/components/equipes/MembroDialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { MoreHorizontal, PlusCircle, Users, DollarSign } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { MembroDialog } from "@/components/equipes/MembroDialog";
+import { useEquipes, Membro, NewMembro } from "@/hooks/useEquipes";
+import { Skeleton } from "@/components/ui/skeleton";
+import StatCard from "@/components/dashboard/StatCard";
 
 export default function Equipes() {
-  const { membros, addMembro, updateMembro, deleteMembro, calcularFolhaPagamento } = useEquipes();
-  const [busca, setBusca] = useState("");
+  const {
+    membros,
+    isLoading,
+    addMembro,
+    updateMembro,
+    deleteMembro,
+    calcularFolhaPagamento,
+  } = useEquipes();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [membroSelecionado, setMembroSelecionado] = useState<
+    Membro | undefined
+  >(undefined);
 
-  const membrosFiltrados = membros.filter(m => 
-    m.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    m.funcao.toLowerCase().includes(busca.toLowerCase())
-  );
+  const handleOpenDialog = (membro?: Membro) => {
+    setMembroSelecionado(membro);
+    setIsDialogOpen(true);
+  };
 
-  const totalAtivos = membros.filter(m => m.status === 'ativo').length;
-  const folhaMensal = calcularFolhaPagamento();
+  const handleSave = (
+    dados: NewMembro | (Partial<Membro> & { id: string })
+  ) => {
+    if ("id" in dados && dados.id) {
+      updateMembro(dados as { id: string } & Partial<Membro>);
+    } else {
+      addMembro(dados as NewMembro);
+    }
+    setIsDialogOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteMembro(id);
+  };
+
+  const folhaPagamento = calcularFolhaPagamento();
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">👷 RH e Equipes</h1>
-          <p className="text-muted-foreground">Gerencie funcionários, folha de pagamento e horas extras</p>
-        </div>
-        <MembroDialog onSave={addMembro} />
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Equipes</h2>
+        <Button onClick={() => handleOpenDialog()}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Novo Membro
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total de Funcionários</p>
-                <p className="text-2xl font-mono font-bold">{membros.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-success/10 flex items-center justify-center">
-                <Briefcase className="h-6 w-6 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Ativos</p>
-                <p className="text-2xl font-mono font-bold">{totalAtivos}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-accent/10 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Folha Mensal</p>
-                <p className="text-2xl font-mono font-bold">R$ {(folhaMensal / 1000).toFixed(0)}K</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+        <StatCard
+          title="Membros Ativos"
+          value={`${membros.filter((m) => m.status === "ativo").length}`}
+          icon={Users}
+          isLoading={isLoading}
+          description="Total de membros na equipe"
+        />
+        <StatCard
+          title="Custo Mensal (Folha)"
+          value={`R$ ${folhaPagamento.toLocaleString("pt-BR")}`}
+          icon={DollarSign}
+          isLoading={isLoading}
+          description="Estimativa de custo mensal com a equipe"
+        />
       </div>
 
-      <Input placeholder="Buscar funcionário..." className="max-w-md" value={busca} onChange={(e) => setBusca(e.target.value)} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Membros da Equipe</CardTitle>
+          <CardDescription>Gerencie os membros da sua equipe.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Função</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Valor/Hora</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell colSpan={5}>
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : membros.length > 0 ? (
+                membros.map((membro) => (
+                  <TableRow key={membro.id}>
+                    <TableCell className="font-medium">{membro.nome}</TableCell>
+                    <TableCell>{membro.funcao}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          membro.status === "ativo" ? "success" : "secondary"
+                        }
+                      >
+                        {membro.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      R$ {membro.valor_hora.toLocaleString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <DropdownMenuItem
+                            onClick={() => handleOpenDialog(membro)}
+                          >
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDelete(membro.id)}
+                          >
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    Nenhum membro encontrado.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {/* Team Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {membrosFiltrados.map((membro) => (
-          <Card key={membro.id} className="card-hover group">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <Avatar className="h-14 w-14">
-                  <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-lg">
-                    {membro.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold truncate">{membro.nome}</h3>
-                      <p className="text-sm text-muted-foreground">{membro.funcao}</p>
-                    </div>
-                    <Badge variant={membro.status === "ativo" ? "default" : "secondary"}>
-                      {membro.status === 'ativo' ? 'Ativo' : membro.status === 'ferias' ? 'Férias' : 'Inativo'}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2 mt-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Valor/hora</span>
-                      <span className="font-mono font-semibold">R$ {membro.valorHora}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Mensal (160h)</span>
-                      <span className="font-mono font-semibold text-primary">R$ {(membro.valorHora * 160).toLocaleString('pt-BR')}</span>
-                    </div>
-                    {membro.obraAtual && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Obra</span>
-                        <span className="font-medium truncate ml-2">{membro.obraAtual}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MembroDialog membro={membro} onSave={(dados) => updateMembro(membro.id, dados)} trigger={<Button size="sm" variant="outline" className="flex-1"><Edit className="h-3 w-3 mr-1" />Editar</Button>} />
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button size="sm" variant="destructive"><Trash2 className="h-3 w-3" /></Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir funcionário?</AlertDialogTitle>
-                          <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMembro(membro.id)} className="bg-destructive">Excluir</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {isDialogOpen && (
+        <MembroDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSave={handleSave}
+          membro={membroSelecionado}
+        />
+      )}
     </div>
   );
 }

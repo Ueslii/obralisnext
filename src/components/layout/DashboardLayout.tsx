@@ -13,11 +13,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           <AppHeader />
-          <main className="flex-1 p-6 animate-fade-in">
-            {children}
-          </main>
+          <main className="flex-1 p-6 animate-fade-in">{children}</main>
         </div>
       </div>
     </SidebarProvider>
   );
 }
+export default DashboardLayout;

@@ -1,98 +1,105 @@
-import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Database } from "@/integrations/supabase/types";
 
-export interface Membro {
-  id: string;
-  nome: string;
-  funcao: string;
-  valorHora: number;
-  telefone?: string;
-  email?: string;
-  obraAtual?: string;
-  status: 'ativo' | 'inativo' | 'ferias';
-}
-
-const STORAGE_KEY = 'obrapro_equipes';
-
-const equipesIniciais: Membro[] = [
-  {
-    id: '1',
-    nome: 'João Silva',
-    funcao: 'Pedreiro',
-    valorHora: 45,
-    telefone: '(11) 98765-4321',
-    email: 'joao@email.com',
-    obraAtual: 'Residencial Vila Nova',
-    status: 'ativo',
-  },
-  {
-    id: '2',
-    nome: 'Maria Santos',
-    funcao: 'Eletricista',
-    valorHora: 55,
-    telefone: '(11) 98765-1234',
-    email: 'maria@email.com',
-    obraAtual: 'Comercial Centro',
-    status: 'ativo',
-  },
-  {
-    id: '3',
-    nome: 'Pedro Oliveira',
-    funcao: 'Encanador',
-    valorHora: 50,
-    telefone: '(11) 98765-5678',
-    email: 'pedro@email.com',
-    status: 'ativo',
-  },
-];
+// Tipos baseados no Supabase, mas exportados para uso na UI
+export type Membro = Database["public"]["Tables"]["membros"]["Row"];
+export type NewMembro = Database["public"]["Tables"]["membros"]["Insert"];
 
 export const useEquipes = () => {
-  const [membros, setMembros] = useState<Membro[]>([]);
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setMembros(JSON.parse(saved));
-    } else {
-      setMembros(equipesIniciais);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(equipesIniciais));
-    }
-  }, []);
+  // Query para listar membros
+  const { data: membros = [], isLoading } = useQuery<Membro[]>({
+    queryKey: ["membros"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("membros")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-  const saveMembros = (novosMembros: Membro[]) => {
-    setMembros(novosMembros);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(novosMembros));
-  };
+      if (error) throw error;
+      return data as Membro[];
+    },
+  });
 
-  const addMembro = (membro: Omit<Membro, 'id'>) => {
-    const novoMembro: Membro = {
-      ...membro,
-      id: Date.now().toString(),
-    };
-    saveMembros([...membros, novoMembro]);
-    toast({ title: 'Membro adicionado com sucesso!' });
-    return novoMembro;
-  };
+  // Mutation para adicionar membro
+  const addMembro = useMutation({
+    mutationFn: async (membro: NewMembro) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
 
-  const updateMembro = (id: string, dados: Partial<Membro>) => {
-    const novosMembros = membros.map((m) => (m.id === id ? { ...m, ...dados } : m));
-    saveMembros(novosMembros);
-    toast({ title: 'Membro atualizado com sucesso!' });
-  };
+      const { data, error } = await supabase
+        .from("membros")
+        .insert([{ ...membro, user_id: user.id }])
+        .select()
+        .single();
 
-  const deleteMembro = (id: string) => {
-    saveMembros(membros.filter((m) => m.id !== id));
-    toast({ title: 'Membro excluído com sucesso!' });
-  };
+      if (error) throw error;
+      return data as Membro;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["membros"] });
+      toast.success("Membro adicionado com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao adicionar membro");
+    },
+  });
 
-  const getMembro = (id: string) => membros.find((m) => m.id === id);
+  // Mutation para atualizar membro
+  const updateMembro = useMutation({
+    mutationFn: async ({ id, ...dados }: Partial<Membro> & { id: string }) => {
+      const { data, error } = await supabase
+        .from("membros")
+        .update(dados)
+        .eq("id", id)
+        .select()
+        .single();
 
+      if (error) throw error;
+      return data as Membro;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["membros"] });
+      toast.success("Membro atualizado com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao atualizar membro");
+    },
+  });
+
+  // Mutation para deletar membro
+  const deleteMembro = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("membros").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["membros"] });
+      toast.success("Membro deletado com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao deletar membro");
+    },
+  });
+
+  // Lógica de cálculo portada para o novo hook
   const calcularFolhaPagamento = () => {
     return membros
-      .filter((m) => m.status === 'ativo')
-      .reduce((total, m) => total + m.valorHora * 160, 0);
+      .filter((m) => m.status === "ativo")
+      .reduce((total, m) => total + (m.valor_hora ?? 0) * 160, 0); // Assumindo 160h/mês
   };
 
-  return { membros, addMembro, updateMembro, deleteMembro, getMembro, calcularFolhaPagamento };
+  return {
+    membros,
+    isLoading,
+    addMembro: addMembro.mutate,
+    updateMembro: updateMembro.mutate,
+    deleteMembro: deleteMembro.mutate,
+    calcularFolhaPagamento,
+  };
 };

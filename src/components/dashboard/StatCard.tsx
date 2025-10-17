@@ -1,36 +1,44 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LucideIcon } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 
 interface StatCardProps {
   title: string;
-  value: string | number;
+  value: string;
   icon: LucideIcon;
-  trend?: {
-    value: string;
-    positive: boolean;
-  };
-  className?: string;
+  description: string;
+  isLoading?: boolean; // Adicionando a propriedade isLoading
 }
 
-export function StatCard({ title, value, icon: Icon, trend, className }: StatCardProps) {
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  description,
+  isLoading,
+}: StatCardProps) => {
   return (
-    <Card className={`card-hover ${className || ""}`}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
-            <p className="stat-value text-foreground">{value}</p>
-            {trend && (
-              <p className={`text-sm mt-2 ${trend.positive ? "text-success" : "text-destructive"}`}>
-                {trend.positive ? "↑" : "↓"} {trend.value}
-              </p>
-            )}
-          </div>
-          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon className="h-6 w-6 text-primary" />
-          </div>
-        </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        {/* Lógica para mostrar Skeleton enquanto os dados carregam */}
+        {isLoading ? (
+          <>
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-4 w-full mt-1" />
+          </>
+        ) : (
+          <>
+            <div className="text-2xl font-bold">{value}</div>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </>
+        )}
       </CardContent>
     </Card>
   );
-}
+};
+
+export default StatCard;

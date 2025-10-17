@@ -1,134 +1,146 @@
-import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Database } from "@/integrations/supabase/types";
+import { useMemo } from "react";
 
-export interface Lancamento {
-  id: string;
-  obraId: string;
-  nomeObra: string;
-  tipo: 'despesa' | 'receita';
-  categoria: 'materiais' | 'alimentacao' | 'combustivel' | 'extras' | 'pagamento' | 'outros';
-  descricao: string;
-  valor: number;
-  data: string;
-  etapa?: string;
-}
+export type Lancamento = Database["public"]["Tables"]["lancamentos"]["Row"] & {
+  obras: { nome: string } | null;
+};
+export type NewLancamento =
+  Database["public"]["Tables"]["lancamentos"]["Insert"];
 
-export interface ControlePorEtapa {
-  obraId: string;
-  nomeObra: string;
-  etapa: string;
-  orcamentoPrevisto: number;
-  custoReal: number;
-  status: 'dentro' | 'atencao' | 'excedido';
-}
+export const useFinanceiro = (dateRange?: { from?: Date; to?: Date }) => {
+  const queryClient = useQueryClient();
 
-const STORAGE_KEY = 'buildwise_lancamentos';
+  const { data: lancamentos = [], isLoading } = useQuery<Lancamento[]>({
+    queryKey: ["lancamentos", dateRange], // <- inclui o filtro na key
+    queryFn: async () => {
+      let query = supabase
+        .from("lancamentos")
+        .select(
+          `
+          *,
+          obras (nome)
+        `
+        )
+        .order("data", { ascending: false });
 
-const lancamentosIniciais: Lancamento[] = [
-  {
-    id: '1',
-    obraId: '1',
-    nomeObra: 'Residencial Vila Nova',
-    tipo: 'despesa',
-    categoria: 'materiais',
-    descricao: 'Cimento e areia',
-    valor: 12500,
-    data: new Date().toISOString().split('T')[0],
-    etapa: 'Fundação',
-  },
-  {
-    id: '2',
-    obraId: '1',
-    nomeObra: 'Residencial Vila Nova',
-    tipo: 'despesa',
-    categoria: 'alimentacao',
-    descricao: 'Marmitas equipe',
-    valor: 850,
-    data: new Date().toISOString().split('T')[0],
-  },
-  {
-    id: '3',
-    obraId: '2',
-    nomeObra: 'Comercial Centro',
-    tipo: 'despesa',
-    categoria: 'combustivel',
-    descricao: 'Diesel betoneira',
-    valor: 420,
-    data: new Date().toISOString().split('T')[0],
-  },
-];
+      // aplica o filtro de datas se houver
+      if (dateRange?.from && dateRange?.to) {
+        query = query
+          .gte("data", dateRange.from.toISOString())
+          .lte("data", dateRange.to.toISOString());
+      }
 
-export const useFinanceiro = () => {
-  const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setLancamentos(JSON.parse(saved));
-    } else {
-      setLancamentos(lancamentosIniciais);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lancamentosIniciais));
-    }
-  }, []);
-
-  const saveLancamentos = (novosLancamentos: Lancamento[]) => {
-    setLancamentos(novosLancamentos);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(novosLancamentos));
-  };
-
-  const addLancamento = (lancamento: Omit<Lancamento, 'id'>) => {
-    const novoLancamento: Lancamento = {
-      ...lancamento,
-      id: Date.now().toString(),
-    };
-    saveLancamentos([...lancamentos, novoLancamento]);
-    toast({ title: 'Lançamento registrado com sucesso!' });
-    return novoLancamento;
-  };
-
-  const updateLancamento = (id: string, dados: Partial<Lancamento>) => {
-    const novosLancamentos = lancamentos.map((l) => (l.id === id ? { ...l, ...dados } : l));
-    saveLancamentos(novosLancamentos);
-    toast({ title: 'Lançamento atualizado com sucesso!' });
-  };
-
-  const deleteLancamento = (id: string) => {
-    saveLancamentos(lancamentos.filter((l) => l.id !== id));
-    toast({ title: 'Lançamento excluído com sucesso!' });
-  };
-
-  const getResumoFinanceiro = () => {
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Lancamento[];
+    },
+  });
+  // Funções de cálculo restauradas usando useMemo para eficiência
+  const resumoFinanceiro = useMemo(() => {
     const totalDespesas = lancamentos
-      .filter((l) => l.tipo === 'despesa')
+      .filter((l) => l.tipo === "despesa")
       .reduce((acc, l) => acc + l.valor, 0);
-    
-    const totalReceitas = lancamentos
-      .filter((l) => l.tipo === 'receita')
-      .reduce((acc, l) => acc + l.valor, 0);
-    
-    const saldo = totalReceitas - totalDespesas;
-    
-    return { totalDespesas, totalReceitas, saldo };
-  };
 
-  const getDespesasPorCategoria = () => {
-    const despesas = lancamentos.filter((l) => l.tipo === 'despesa');
-    const porCategoria: Record<string, number> = {};
-    
-    despesas.forEach((l) => {
-      porCategoria[l.categoria] = (porCategoria[l.categoria] || 0) + l.valor;
-    });
-    
-    return porCategoria;
-  };
+    const totalReceitas = lancamentos
+      .filter((l) => l.tipo === "receita")
+      .reduce((acc, l) => acc + l.valor, 0);
+
+    const saldo = totalReceitas - totalDespesas;
+
+    return { totalDespesas, totalReceitas, saldo };
+  }, [lancamentos]);
+
+  const despesasPorCategoria = useMemo(() => {
+    const porCategoria: { [key: string]: number } = {};
+    lancamentos
+      .filter((l) => l.tipo === "despesa")
+      .forEach((l) => {
+        const categoria = l.categoria ?? "outros";
+        porCategoria[categoria] = (porCategoria[categoria] || 0) + l.valor;
+      });
+
+    return Object.entries(porCategoria).map(([name, despesas]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      Despesas: despesas,
+    }));
+  }, [lancamentos]);
+
+  const addLancamento = useMutation({
+    mutationFn: async (lancamento: NewLancamento) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data, error } = await supabase
+        .from("lancamentos")
+        .insert([{ ...lancamento, user_id: user.id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
+      toast.success("Lançamento adicionado com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao adicionar lançamento");
+    },
+  });
+
+  const updateLancamento = useMutation({
+    mutationFn: async ({
+      id,
+      ...dados
+    }: Partial<NewLancamento> & { id: string }) => {
+      const { data, error } = await supabase
+        .from("lancamentos")
+        .update(dados)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
+      toast.success("Lançamento atualizado com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao atualizar lançamento");
+    },
+  });
+
+  const deleteLancamento = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("lancamentos")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
+      toast.success("Lançamento deletado com sucesso!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao deletar lançamento");
+    },
+  });
 
   return {
     lancamentos,
-    addLancamento,
-    updateLancamento,
-    deleteLancamento,
-    getResumoFinanceiro,
-    getDespesasPorCategoria,
+    isLoading,
+    resumoFinanceiro, // Retornando o resumo
+    despesasPorCategoria, // Retornando os dados para o gráfico
+    addLancamento: addLancamento.mutate,
+    updateLancamento: updateLancamento.mutate,
+    deleteLancamento: deleteLancamento.mutate,
   };
 };
