@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCompanyScope } from "./useCompanyScope";
 
 export interface Insumo {
   id: string;
@@ -255,17 +256,41 @@ const mapOrcamentoRow = (row: Record<string, any>): Orcamento | null => {
 
 export const useOrcamentos = () => {
   const queryClient = useQueryClient();
+  const {
+    memberUserIds,
+    isLoading: isCompanyScopeLoading,
+  } = useCompanyScope();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["orcamentos"],
+    queryKey: ["orcamentos", memberUserIds.join(",")],
+    enabled: memberUserIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orcamentos")
         .select("*")
+        .in("user_id", memberUserIds)
         .order("created_at", { ascending: false });
 
       if (error) {
-        throw error;
+        if (error.code !== "42703") {
+          throw error;
+        }
+
+        const fallback = await supabase
+          .from("orcamentos")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (fallback.error) {
+          throw fallback.error;
+        }
+
+        return (fallback.data ?? [])
+          .filter((row) =>
+            memberUserIds.includes((row as Record<string, any>).user_id ?? "")
+          )
+          .map((row) => mapOrcamentoRow(row as Record<string, any>))
+          .filter(Boolean) as Orcamento[];
       }
 
       return (data ?? [])
@@ -503,7 +528,7 @@ const createRevisionMutation = useMutation({
 
   return {
     orcamentos,
-    isLoading,
+    isLoading: isLoading || isCompanyScopeLoading,
     custoPorM2Padrao,
     addOrcamento: addMutation.mutateAsync,
     updateOrcamento: (id: string, dados: OrcamentoBase) =>

@@ -4,6 +4,7 @@ import { endOfDay, startOfDay } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { useCompanyScope } from "./useCompanyScope";
 
 export type Lancamento =
   Database["public"]["Tables"]["lancamentos"]["Row"] & {
@@ -18,6 +19,10 @@ type DateRangeFilter = { from?: Date; to?: Date };
 
 export const useFinanceiro = (dateRange?: DateRangeFilter) => {
   const queryClient = useQueryClient();
+  const {
+    memberUserIds,
+    isLoading: isCompanyScopeLoading,
+  } = useCompanyScope();
 
   const normalizedRange = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) {
@@ -31,7 +36,13 @@ export const useFinanceiro = (dateRange?: DateRangeFilter) => {
   }, [dateRange]);
 
   const { data: lancamentos = [], isLoading } = useQuery<Lancamento[]>({
-    queryKey: ["lancamentos", normalizedRange.from, normalizedRange.to],
+    queryKey: [
+      "lancamentos",
+      normalizedRange.from,
+      normalizedRange.to,
+      memberUserIds.join(","),
+    ],
+    enabled: memberUserIds.length > 0,
     queryFn: async () => {
       let query = supabase
         .from("lancamentos")
@@ -42,6 +53,7 @@ export const useFinanceiro = (dateRange?: DateRangeFilter) => {
           membros (id, nome, funcao)
         `
         )
+        .in("user_id", memberUserIds)
         .order("data", { ascending: false });
 
       if (normalizedRange.from && normalizedRange.to) {
@@ -173,7 +185,7 @@ export const useFinanceiro = (dateRange?: DateRangeFilter) => {
 
   return {
     lancamentos,
-    isLoading,
+    isLoading: isLoading || isCompanyScopeLoading,
     resumoFinanceiro,
     despesasPorCategoria,
     addLancamento: addLancamento.mutateAsync,

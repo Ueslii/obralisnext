@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCompanyScope } from "./useCompanyScope";
 
 export interface ObraComentario {
   id: string;
@@ -123,10 +124,40 @@ const mapEtapaBase = (row: Record<string, any>): ObraEtapaBase => ({
 
 export const useObraDetalhes = (obraId: string) => {
   const queryClient = useQueryClient();
+  const {
+    memberUserIds,
+    isLoading: isCompanyScopeLoading,
+  } = useCompanyScope();
+
+  const acessoQuery = useQuery({
+    queryKey: ["obra", obraId, "acesso", memberUserIds.join(",")],
+    enabled: Boolean(obraId) && memberUserIds.length > 0,
+    staleTime: 1000 * 60,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("obras")
+        .select("id")
+        .eq("id", obraId)
+        .in("user_id", memberUserIds)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error("Obra nao encontrada ou sem permissao");
+      }
+
+      return true;
+    },
+  });
+
+  const acessoLiberado = acessoQuery.data === true;
 
   const comentariosQuery = useQuery({
-    queryKey: ["obra", obraId, "comentarios"],
-    enabled: Boolean(obraId),
+    queryKey: ["obra", obraId, "comentarios", memberUserIds.join(",")],
+    enabled: acessoLiberado,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("obra_comentarios")
@@ -188,8 +219,8 @@ export const useObraDetalhes = (obraId: string) => {
   });
 
   const insumosQuery = useQuery({
-    queryKey: ["obra", obraId, "insumos"],
-    enabled: Boolean(obraId),
+    queryKey: ["obra", obraId, "insumos", memberUserIds.join(",")],
+    enabled: acessoLiberado,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("obra_insumos")
@@ -210,8 +241,8 @@ export const useObraDetalhes = (obraId: string) => {
   });
 
   const etapasQuery = useQuery<ObraEtapaBase[]>({
-    queryKey: ["obra", obraId, "etapas"],
-    enabled: Boolean(obraId),
+    queryKey: ["obra", obraId, "etapas", memberUserIds.join(",")],
+    enabled: acessoLiberado,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("obra_etapas")
@@ -234,8 +265,8 @@ export const useObraDetalhes = (obraId: string) => {
   });
 
   const imprevistosQuery = useQuery({
-    queryKey: ["obra", obraId, "imprevistos"],
-    enabled: Boolean(obraId),
+    queryKey: ["obra", obraId, "imprevistos", memberUserIds.join(",")],
+    enabled: acessoLiberado,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("obra_imprevistos")
@@ -405,6 +436,8 @@ export const useObraDetalhes = (obraId: string) => {
     insumos,
     imprevistos,
     isLoading:
+      isCompanyScopeLoading ||
+      acessoQuery.isLoading ||
       comentariosQuery.isLoading ||
       insumosQuery.isLoading ||
       etapasQuery.isLoading ||

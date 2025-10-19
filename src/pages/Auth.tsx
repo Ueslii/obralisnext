@@ -11,15 +11,78 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import authBackground from "@/assets/auth-background.jpg";
 import logoBranco from "@/assets/logo-branco.svg";
 
+type SignUpFormState = {
+  nome: string;
+  email: string;
+  telefone: string;
+  password: string;
+  confirmPassword: string;
+  acceptTerms: boolean;
+  companyName: string;
+  companyIdentifier: string;
+  segment: string;
+  role: string;
+  companySize: string;
+};
+
+const initialSignUpForm: SignUpFormState = {
+  nome: "",
+  email: "",
+  telefone: "",
+  password: "",
+  confirmPassword: "",
+  acceptTerms: false,
+  companyName: "",
+  companyIdentifier: "",
+  segment: "",
+  role: "",
+  companySize: "",
+};
+
+const SEGMENT_OPTIONS = [
+  { value: "residencial", label: "Residencial" },
+  { value: "comercial", label: "Comercial" },
+  { value: "industrial", label: "Industrial" },
+  { value: "infraestrutura", label: "Infraestrutura" },
+  { value: "incorporadora", label: "Incorporadora" },
+  { value: "outros", label: "Outros" },
+];
+
+const ROLE_OPTIONS = [
+  { value: "admin", label: "Administrador(a)" },
+  { value: "engenheiro", label: "Engenheiro(a)" },
+  { value: "gestor", label: "Gestor(a)" },
+  { value: "financeiro", label: "Financeiro" },
+  { value: "planejamento", label: "Planejamento" },
+  { value: "compras", label: "Compras" },
+  { value: "outro", label: "Outro" },
+];
+
+const COMPANY_SIZE_OPTIONS = [
+  { value: "ate-5", label: "Ate 5 obras em andamento" },
+  { value: "6-15", label: "Entre 6 e 15 obras" },
+  { value: "16-30", label: "Entre 16 e 30 obras" },
+  { value: "31-60", label: "Entre 31 e 60 obras" },
+  { value: "acima-60", label: "Mais de 60 obras" },
+  { value: "nao-informa", label: "Prefiro nao informar" },
+];
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [nome, setNome] = useState("");
+  const [formStep, setFormStep] = useState<1 | 2>(1);
+  const [form, setForm] = useState<SignUpFormState>(initialSignUpForm);
   const [pending, setPending] = useState(false);
   const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -31,18 +94,85 @@ export default function Auth() {
   }, [authLoading, isAuthenticated, navigate]);
 
   const resetForm = () => {
-    setEmail("");
-    setPassword("");
-    setNome("");
+    setForm(initialSignUpForm);
+    setFormStep(1);
+    setPending(false);
+  };
+
+  const updateForm = <Key extends keyof SignUpFormState>(
+    field: Key,
+    value: SignUpFormState[Key]
+  ) => {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const validateStepOne = () => {
+    if (!form.nome.trim()) {
+      return "Informe o nome completo.";
+    }
+    if (!form.email.trim()) {
+      return "Informe o e-mail corporativo.";
+    }
+    if (!form.email.includes("@")) {
+      return "Informe um e-mail valido.";
+    }
+    if (!form.password) {
+      return "Defina uma senha.";
+    }
+    if (form.password.length < 6) {
+      return "A senha deve ter pelo menos 6 caracteres.";
+    }
+    if (form.password !== form.confirmPassword) {
+      return "As senhas nao coincidem.";
+    }
+    if (!form.acceptTerms) {
+      return "Voce precisa aceitar os termos para continuar.";
+    }
+    return null;
+  };
+
+  const validateStepTwo = () => {
+    if (!form.companyName.trim()) {
+      return "Informe o nome da construtora.";
+    }
+    if (!form.segment) {
+      return "Selecione o segmento de atuacao.";
+    }
+    if (!form.role) {
+      return "Selecione o cargo.";
+    }
+    return null;
   };
 
   const handleAuth = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (!isLogin) {
+      if (formStep === 1) {
+        const stepOneError = validateStepOne();
+        if (stepOneError) {
+          toast.error(stepOneError);
+          return;
+        }
+        setFormStep(2);
+        return;
+      }
+
+      const stepTwoError = validateStepTwo();
+      if (stepTwoError) {
+        toast.error(stepTwoError);
+        return;
+      }
+    }
+
     setPending(true);
 
     try {
       if (isLogin) {
-        const { error } = await signIn(email, password);
+        const { error } = await signIn(form.email, form.password);
         if (error) {
           throw error;
         }
@@ -52,14 +182,29 @@ export default function Auth() {
         return;
       }
 
-      const displayName = nome.trim() || email.split("@")[0];
-      const { error } = await signUp(email, password, displayName);
+      const trimmedIdentifier = form.companyIdentifier.trim();
+      const isExistingCompanyFlow = trimmedIdentifier.length > 0;
+
+      const { error } = await signUp({
+        email: form.email.trim(),
+        password: form.password,
+        nome: form.nome.trim(),
+        telefone: form.telefone.trim() || undefined,
+        cargo: form.role,
+        segmento: form.segment,
+        empresaNome: form.companyName.trim(),
+        empresaIdentificador: trimmedIdentifier || undefined,
+        empresaPorte: form.companySize || undefined,
+      });
+
       if (error) {
         throw error;
       }
 
       toast.success(
-        "Cadastro realizado! Verifique seu e-mail para confirmar a conta."
+        isExistingCompanyFlow
+          ? "Solicitacao enviada! Assim que um administrador aprovar, voce recebera um aviso por e-mail."
+          : "Cadastro realizado! Verifique seu e-mail para confirmar a conta."
       );
       resetForm();
       setIsLogin(true);
@@ -67,11 +212,15 @@ export default function Auth() {
       const message =
         typeof err === "object" && err !== null && "message" in err
           ? String((err as { message: string }).message)
-          : "Não foi possível concluir a ação.";
+          : "Nao foi possivel concluir a acao.";
       toast.error(message);
     } finally {
       setPending(false);
     }
+  };
+
+  const handleBackToStepOne = () => {
+    setFormStep(1);
   };
 
   return (
@@ -85,7 +234,9 @@ export default function Auth() {
             <p className="text-balance text-muted-foreground">
               {isLogin
                 ? "Insira seu e-mail para acessar sua conta."
-                : "Crie sua conta para começar a usar a plataforma."}
+                : formStep === 1
+                ? "Preencha seus dados pessoais para comecar."
+                : "Agora conte um pouco sobre a empresa."}
             </p>
           </div>
 
@@ -101,58 +252,289 @@ export default function Auth() {
             <CardContent>
               <form onSubmit={handleAuth} className="grid gap-4">
                 {!isLogin && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="nome">Nome</Label>
-                    <Input
-                      id="nome"
-                      type="text"
-                      placeholder="Como gostaria de ser chamado"
-                      value={nome}
-                      onChange={(event) => setNome(event.target.value)}
-                      disabled={pending}
-                    />
+                  <div className="flex justify-between text-sm font-medium">
+                    <span
+                      className={
+                        formStep === 1
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      }
+                    >
+                      1. Informacoes pessoais
+                    </span>
+                    <span
+                      className={
+                        formStep === 2
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      }
+                    >
+                      2. Empresa
+                    </span>
                   </div>
                 )}
 
-                <div className="grid gap-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="voce@exemplo.com"
-                    required
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    disabled={pending}
-                  />
-                </div>
+                {isLogin && (
+                  <>
+                    <div className="grid gap-2">
+                      <Label htmlFor="login-email">E-mail corporativo</Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="voce@empresa.com"
+                        value={form.email}
+                        onChange={(event) =>
+                          updateForm("email", event.target.value)
+                        }
+                        disabled={pending}
+                        required
+                      />
+                    </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Mínimo de 6 caracteres"
-                    required
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    disabled={pending}
-                  />
-                </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="login-password">Senha</Label>
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="Sua senha"
+                        value={form.password}
+                        onChange={(event) =>
+                          updateForm("password", event.target.value)
+                        }
+                        disabled={pending}
+                        required
+                      />
+                    </div>
+                  </>
+                )}
 
-                <Button type="submit" className="w-full" disabled={pending}>
-                  {pending
-                    ? "Processando..."
-                    : isLogin
-                    ? "Entrar"
-                    : "Criar conta"}
-                </Button>
+                {!isLogin && formStep === 1 && (
+                  <>
+                    <div className="grid gap-2">
+                      <Label htmlFor="nome">Nome completo</Label>
+                      <Input
+                        id="nome"
+                        type="text"
+                        placeholder="Como voce gostaria de ser chamado"
+                        value={form.nome}
+                        onChange={(event) =>
+                          updateForm("nome", event.target.value)
+                        }
+                        disabled={pending}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">E-mail corporativo</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="voce@empresa.com"
+                        value={form.email}
+                        onChange={(event) =>
+                          updateForm("email", event.target.value)
+                        }
+                        disabled={pending}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="telefone">Telefone (opcional)</Label>
+                      <Input
+                        id="telefone"
+                        type="tel"
+                        placeholder="(00) 00000-0000"
+                        value={form.telefone}
+                        onChange={(event) =>
+                          updateForm("telefone", event.target.value)
+                        }
+                        disabled={pending}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="password">Senha</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Minimo de 6 caracteres"
+                        value={form.password}
+                        onChange={(event) =>
+                          updateForm("password", event.target.value)
+                        }
+                        disabled={pending}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="confirmPassword">Confirmar senha</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="Repita a senha"
+                        value={form.confirmPassword}
+                        onChange={(event) =>
+                          updateForm("confirmPassword", event.target.value)
+                        }
+                        disabled={pending}
+                      />
+                    </div>
+
+                    <div className="flex items-start gap-2 rounded-md border border-muted p-3">
+                      <Checkbox
+                        id="acceptTerms"
+                        checked={form.acceptTerms}
+                        onCheckedChange={(checked) =>
+                          updateForm("acceptTerms", checked === true)
+                        }
+                        disabled={pending}
+                      />
+                      <Label
+                        htmlFor="acceptTerms"
+                        className="text-left text-sm font-normal text-muted-foreground"
+                      >
+                        Li e aceito os Termos de Uso e a Politica de Privacidade
+                        da plataforma.
+                      </Label>
+                    </div>
+                  </>
+                )}
+
+                {!isLogin && formStep === 2 && (
+                  <>
+                    <div className="grid gap-2">
+                      <Label htmlFor="companyName">Nome da construtora</Label>
+                      <Input
+                        id="companyName"
+                        type="text"
+                        placeholder="Informe o nome oficial da empresa"
+                        value={form.companyName}
+                        onChange={(event) =>
+                          updateForm("companyName", event.target.value)
+                        }
+                        disabled={pending}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="companyIdentifier">
+                        CNPJ ou codigo da empresa (opcional)
+                      </Label>
+                      <Input
+                        id="companyIdentifier"
+                        type="text"
+                        placeholder="00.000.000/0000-00"
+                        value={form.companyIdentifier}
+                        onChange={(event) =>
+                          updateForm("companyIdentifier", event.target.value)
+                        }
+                        disabled={pending}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Se sua construtora ja possui conta, informe o CNPJ ou codigo para solicitar acesso ao administrador.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>Segmento de atuacao</Label>
+                      <Select
+                        value={form.segment || undefined}
+                        onValueChange={(value) => updateForm("segment", value)}
+                        disabled={pending}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o segmento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SEGMENT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>Cargo ou funcao</Label>
+                      <Select
+                        value={form.role || undefined}
+                        onValueChange={(value) => updateForm("role", value)}
+                        disabled={pending}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione seu cargo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>
+                        Numero de obras em andamento ou porte (opcional)
+                      </Label>
+                      <Select
+                        value={form.companySize || undefined}
+                        onValueChange={(value) =>
+                          updateForm("companySize", value)
+                        }
+                        disabled={pending}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma opcao" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COMPANY_SIZE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
+                {isLogin && (
+                  <Button type="submit" className="w-full" disabled={pending}>
+                    {pending ? "Processando..." : "Entrar"}
+                  </Button>
+                )}
+
+                {!isLogin && formStep === 1 && (
+                  <Button type="submit" className="w-full">
+                    Continuar
+                  </Button>
+                )}
+
+                {!isLogin && formStep === 2 && (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleBackToStepOne}
+                      disabled={pending}
+                    >
+                      Voltar
+                    </Button>
+                    <Button type="submit" className="flex-1" disabled={pending}>
+                      {pending ? "Processando..." : "Criar conta"}
+                    </Button>
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>
 
           <div className="text-center text-sm">
-            {isLogin ? "Não possui uma conta?" : "Já possui uma conta?"}
+            {isLogin ? "Nao possui uma conta?" : "Ja possui uma conta?"}
             <Button
               variant="link"
               onClick={() => {
@@ -162,7 +544,7 @@ export default function Auth() {
               className="ml-1 underline"
               disabled={pending}
             >
-              {isLogin ? "Cadastre-se" : "Faça login"}
+              {isLogin ? "Cadastre-se" : "Faca login"}
             </Button>
           </div>
         </div>
@@ -171,16 +553,16 @@ export default function Auth() {
       <div className="relative hidden bg-muted lg:block">
         <img
           src={authBackground}
-          alt="Imagem de uma construção"
+          alt="Imagem de uma construcao"
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 p-12 text-center">
           <img src={logoBranco} alt="Logo Obralis" className="mb-6 w-[260px]" />
           <p className="text-2xl font-semibold text-white">
-            A plataforma completa para gestão de obras.
+            A plataforma completa para gestao de obras.
           </p>
           <p className="mt-2 max-w-md text-white/80">
-            Controle, eficiência e resultados em um só lugar. Economize tempo e
+            Controle, eficiencia e resultados em um so lugar. Economize tempo e
             mantenha cada projeto sob controle.
           </p>
         </div>

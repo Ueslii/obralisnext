@@ -1,10 +1,13 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Tables,
   TablesInsert,
 } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { useCompanyScope } from "./useCompanyScope";
 
 type ObraRow = Tables<"obras">;
 
@@ -43,13 +46,25 @@ const statusPadrao: Obra["status"] = "planejada";
 
 export const useObras = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const {
+    memberUserIds,
+    isLoading: isCompanyScopeLoading,
+  } = useCompanyScope();
+
+  const allowedUserIds = useMemo(() => {
+    if (memberUserIds.length > 0) return memberUserIds;
+    return user?.id ? [user.id] : [];
+  }, [memberUserIds, user?.id]);
 
   const { data: obras = [], isLoading } = useQuery<Obra[]>({
-    queryKey: ["obras"],
+    queryKey: ["obras", allowedUserIds.join(",")],
+    enabled: allowedUserIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("obras")
         .select("*")
+        .in("user_id", allowedUserIds)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -226,7 +241,7 @@ export const useObras = () => {
 
   return {
     obras,
-    isLoading,
+    isLoading: isLoading || isCompanyScopeLoading,
     addObra: addObra.mutateAsync,
     addObraPending: addObra.isPending,
     updateObra: updateObra.mutateAsync,

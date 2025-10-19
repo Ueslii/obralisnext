@@ -60,6 +60,189 @@ export type Database = {
           }
         ];
       };
+      construtora_convites: {
+        Row: {
+          cargo_sugerido: string | null;
+          construtora_id: string;
+          created_at: string;
+          created_by: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invited_by: string | null;
+          responded_at: string | null;
+          status: Database["public"]["Enums"]["convite_status"];
+          token: string;
+        };
+        Insert: {
+          cargo_sugerido?: string | null;
+          construtora_id: string;
+          created_at?: string;
+          created_by: string;
+          email: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          responded_at?: string | null;
+          status?: Database["public"]["Enums"]["convite_status"];
+          token?: string;
+        };
+        Update: {
+          cargo_sugerido?: string | null;
+          construtora_id?: string;
+          created_at?: string;
+          created_by?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          responded_at?: string | null;
+          status?: Database["public"]["Enums"]["convite_status"];
+          token?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "construtora_convites_construtora_id_fkey";
+            columns: ["construtora_id"];
+            isOneToOne: false;
+            referencedRelation: "construtoras";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "construtora_convites_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "construtora_convites_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      construtora_membros: {
+        Row: {
+          accepted_at: string | null;
+          cargo: string | null;
+          construtora_id: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          invited_by: string | null;
+          role: string;
+          user_id: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          cargo?: string | null;
+          construtora_id: string;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          invited_by?: string | null;
+          role?: string;
+          user_id: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          cargo?: string | null;
+          construtora_id?: string;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          invited_by?: string | null;
+          role?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "construtora_membros_construtora_id_fkey";
+            columns: ["construtora_id"];
+            isOneToOne: false;
+            referencedRelation: "construtoras";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "construtora_membros_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "construtora_membros_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "construtora_membros_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      construtoras: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          identificador: string | null;
+          metadata: Json | null;
+          nome: string;
+          owner_id: string;
+          porte: string | null;
+          segmento: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          identificador?: string | null;
+          metadata?: Json | null;
+          nome: string;
+          owner_id: string;
+          porte?: string | null;
+          segmento?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          identificador?: string | null;
+          metadata?: Json | null;
+          nome?: string;
+          owner_id?: string;
+          porte?: string | null;
+          segmento?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "construtoras_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "construtoras_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       entregas: {
         Row: {
           created_at: string;
@@ -558,13 +741,30 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      construtoras_public: {
+        Row: {
+          id: string;
+          identificador: string | null;
+          nome: string;
+        };
+        Insert: {
+          id?: string;
+          identificador?: string | null;
+          nome?: string;
+        };
+        Update: {
+          id?: string;
+          identificador?: string | null;
+          nome?: string;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       [_ in never]: never;
     };
     Enums: {
-      [_ in never]: never;
+      convite_status: "pending" | "accepted" | "declined" | "expired";
     };
     CompositeTypes: {
       [_ in never]: never;

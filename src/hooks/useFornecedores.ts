@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useCompanyScope } from "./useCompanyScope";
 
 export interface FornecedorFormData {
   nome: string;
@@ -81,10 +82,16 @@ const mapEntregaRow = (row: Record<string, any>): Entrega => {
   };
 };
 
-const fetchEntregas = async (): Promise<Entrega[]> => {
+const fetchEntregas = async (allowedUserIds: string[]): Promise<Entrega[]> => {
+  if (allowedUserIds.length === 0) {
+    return [];
+  }
+
+  const allowed = new Set(allowedUserIds);
+
   const tryFornecedorEntregas = await supabase
     .from("fornecedor_entregas")
-    .select("*, obras (nome)")
+    .select("*, obras (id, nome, user_id)")
     .order("created_at", { ascending: false });
 
   if (tryFornecedorEntregas.error) {
@@ -94,19 +101,29 @@ const fetchEntregas = async (): Promise<Entrega[]> => {
 
     const fallback = await supabase
       .from("entregas")
-      .select("*, obras (nome)")
+      .select("*, obras (id, nome, user_id)")
       .order("created_at", { ascending: false });
 
     if (fallback.error) {
       throw fallback.error;
     }
 
-    return (fallback.data ?? []).map((row) => mapEntregaRow(row as Record<string, any>));
+    return (fallback.data ?? [])
+      .filter((row) => {
+        const record = row as Record<string, any>;
+        const ownerId = record.user_id ?? record.obras?.user_id ?? null;
+        return ownerId ? allowed.has(ownerId) : false;
+      })
+      .map((row) => mapEntregaRow(row as Record<string, any>));
   }
 
-  return (tryFornecedorEntregas.data ?? []).map((row) =>
-    mapEntregaRow(row as Record<string, any>)
-  );
+  return (tryFornecedorEntregas.data ?? [])
+    .filter((row) => {
+      const record = row as Record<string, any>;
+      const ownerId = record.user_id ?? record.obras?.user_id ?? null;
+      return ownerId ? allowed.has(ownerId) : false;
+    })
+    .map((row) => mapEntregaRow(row as Record<string, any>));
 };
 
 const buildFornecedorPayload = (dados: FornecedorFormData) => {
@@ -132,14 +149,43 @@ const buildFornecedorPayload = (dados: FornecedorFormData) => {
 
 export const useFornecedores = () => {
   const queryClient = useQueryClient();
+  const {
+    memberUserIds,
+    isLoading: isCompanyScopeLoading,
+  } = useCompanyScope();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["fornecedores"],
+    queryKey: ["fornecedores", memberUserIds.join(",")],
+    enabled: memberUserIds.length > 0,
     queryFn: async () => {
+      const allowed = new Set(memberUserIds);
       const [fornecedoresResposta, entregas] = await Promise.all([
-        supabase.from("fornecedores").select("*").order("created_at", { ascending: false }),
-        fetchEntregas(),
+        supabase
+          .from("fornecedores")
+          .select("*")
+          .in("user_id", memberUserIds)
+          .order("created_at", { ascending: false }),
+        fetchEntregas(memberUserIds),
       ]);
+
+      if (fornecedoresResposta.error?.code === "42703") {
+        const fallback = await supabase
+          .from("fornecedores")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (fallback.error) {
+          throw fallback.error;
+        }
+
+        return {
+          fornecedores:
+            (fallback.data ?? []).filter((row: Record<string, any>) =>
+              allowed.has(row.user_id ?? "")
+            ),
+          entregas,
+        };
+      }
 
       if (fornecedoresResposta.error) {
         throw fornecedoresResposta.error;
@@ -391,7 +437,7 @@ export const useFornecedores = () => {
   return {
     fornecedores,
     entregas,
-    isLoading,
+    isLoading: isLoading || isCompanyScopeLoading,
     addFornecedor: addFornecedorMutation.mutateAsync,
     updateFornecedor: (id: string, dados: FornecedorFormData) =>
       updateFornecedorMutation.mutateAsync({ id, dados }),

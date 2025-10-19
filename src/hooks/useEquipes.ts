@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
+import { useCompanyScope } from "./useCompanyScope";
 
 // Tipos baseados no Supabase, mas exportados para uso na UI
 export type Membro = Database["public"]["Tables"]["membros"]["Row"];
@@ -9,14 +10,20 @@ export type NewMembro = Database["public"]["Tables"]["membros"]["Insert"];
 
 export const useEquipes = () => {
   const queryClient = useQueryClient();
+  const {
+    memberUserIds,
+    isLoading: isCompanyScopeLoading,
+  } = useCompanyScope();
 
   // Query para listar membros
   const { data: membros = [], isLoading } = useQuery<Membro[]>({
-    queryKey: ["membros"],
+    queryKey: ["membros", memberUserIds.join(",")],
+    enabled: memberUserIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("membros")
         .select("*")
+        .in("user_id", memberUserIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -96,7 +103,7 @@ export const useEquipes = () => {
 
   return {
     membros,
-    isLoading,
+    isLoading: isLoading || isCompanyScopeLoading,
     addMembro: addMembro.mutateAsync,
     addMembroPending: addMembro.isPending,
     updateMembro: updateMembro.mutateAsync,
