@@ -11,7 +11,7 @@ import {
   Truck,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import MiniLogo from "@/assets/MiniLOgo.svg";
+import MiniLogo from "@/assets/MiniLogo.svg";
 import {
   Sidebar,
   SidebarContent,

@@ -35,9 +35,7 @@ const mapSeveridade = (value?: string | null): AlertaSeveridade => {
   return "baixa";
 };
 
-const mapAlert = (
-  row: Record<string, any>
-): Alerta => {
+const mapAlert = (row: Record<string, any>): Alerta => {
   return {
     id: row.id,
     tipo: row.tipo ?? "info",
@@ -54,10 +52,7 @@ const mapAlert = (
 
 export const useAlertas = () => {
   const queryClient = useQueryClient();
-  const {
-    memberUserIds,
-    isLoading: isCompanyScopeLoading,
-  } = useCompanyScope();
+  const { memberUserIds, isLoading: isCompanyScopeLoading } = useCompanyScope();
 
   const { data: alertas = [], isLoading } = useQuery<Alerta[]>({
     queryKey: ["alertas", memberUserIds.join(",")],
@@ -199,3 +194,4 @@ export const useAlertas = () => {
     getAlertasNaoLidos: () => alertasNaoLidos,
   };
 };
+

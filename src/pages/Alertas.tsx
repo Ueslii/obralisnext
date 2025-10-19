@@ -12,9 +12,7 @@ import { useAlertas } from "@/hooks/useAlertas";
 
 const formatDate = (value: string) => {
   const parsed = new Date(value);
-  return Number.isNaN(parsed.valueOf())
-    ? value
-    : parsed.toLocaleString("pt-BR");
+  return Number.isNaN(parsed.valueOf()) ? value : parsed.toLocaleString("pt-BR");
 };
 
 const severidadeBadge = {
@@ -43,7 +41,7 @@ export default function Alertas() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">🚨 Alertas Inteligentes</h1>
+          <h1 className="text-3xl font-bold mb-2">⚠️ Alertas Inteligentes</h1>
           <p className="text-muted-foreground">
             Sistema de notificações e alertas automáticos
           </p>
@@ -99,14 +97,10 @@ export default function Alertas() {
       {isLoading && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Carregando alertas
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Carregando alertas</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Buscando alertas cadastrados...
-            </p>
+            <p className="text-sm text-muted-foreground">Buscando alertas cadastrados...</p>
           </CardContent>
         </Card>
       )}
@@ -117,9 +111,7 @@ export default function Alertas() {
             <AlertTriangle className="h-5 w-5 text-primary" />
             Histórico de Alertas
           </CardTitle>
-          <CardDescription>
-            Todos os alertas e notificações do sistema
-          </CardDescription>
+          <CardDescription>Todos os alertas e notificações do sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -127,9 +119,7 @@ export default function Alertas() {
               <div
                 key={alerta.id}
                 className={`p-4 rounded-lg border transition-all ${
-                  alerta.lido
-                    ? "border-border hover:bg-muted/30"
-                    : "bg-muted/50 border-primary"
+                  alerta.lido ? "border-border hover:bg-muted/30" : "bg-muted/50 border-primary"
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -170,27 +160,17 @@ export default function Alertas() {
                       </Button>
                     </div>
 
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {alerta.descricao}
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-3">{alerta.descricao}</p>
 
                     {alerta.nomeObra && (
-                      <p className="text-xs text-muted-foreground mb-2">
-                        🏗️ Obra: {alerta.nomeObra}
-                      </p>
+                      <p className="text-xs text-muted-foreground mb-2">🏗️ Obra: {alerta.nomeObra}</p>
                     )}
 
                     <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(alerta.data)}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{formatDate(alerta.data)}</span>
 
                       {alerta.acao && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                        >
+                        <Button size="sm" variant="outline" className="h-7 text-xs">
                           {alerta.acao}
                         </Button>
                       )}
@@ -218,8 +198,7 @@ export default function Alertas() {
                 <CheckCircle2 className="h-12 w-12 text-success mx-auto mb-3" />
                 <p className="text-lg font-medium mb-1">Nenhum alerta ativo</p>
                 <p className="text-sm text-muted-foreground">
-                  O sistema está monitorando suas obras e notificará sobre qualquer
-                  situação relevante.
+                  O sistema está monitorando suas obras e notificará sobre qualquer situação relevante.
                 </p>
               </div>
             )}
@@ -229,3 +208,4 @@ export default function Alertas() {
     </div>
   );
 }
+

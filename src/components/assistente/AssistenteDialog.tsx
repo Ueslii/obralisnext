@@ -51,7 +51,7 @@ export function AssistenteDialog({ contexto, trigger }: AssistenteDialogProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="cronograma">📅 Otimização de Cronograma</SelectItem>
+                <SelectItem value="cronograma">🕒 Otimização de Cronograma</SelectItem>
                 <SelectItem value="custo">💰 Redução de Custos</SelectItem>
                 <SelectItem value="eficiencia">⚡ Aumento de Eficiência</SelectItem>
               </SelectContent>
@@ -88,3 +88,4 @@ export function AssistenteDialog({ contexto, trigger }: AssistenteDialogProps) {
     </Dialog>
   );
 }
+
