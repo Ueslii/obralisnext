@@ -1,196 +1,406 @@
-import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-export interface Entrega {
-  id: string;
-  fornecedorId: string;
-  obraId: string;
-  nomeObra: string;
-  material: string;
-  quantidade: number;
-  unidade: string;
-  valorTotal: number;
-  dataEntrega: string;
-  prazoEntrega: number; // dias
-  status: 'pendente' | 'entregue' | 'atrasado';
+export interface FornecedorFormData {
+  nome: string;
+  cnpj?: string;
+  categoria?: string;
+  contato?: string;
+  telefone?: string;
+  email?: string;
+  prazoMedio?: number | null;
+  avaliacaoQualidade?: number | null;
 }
 
-export interface Fornecedor {
+export interface Fornecedor extends FornecedorFormData {
   id: string;
-  nome: string;
-  cnpj: string;
-  categoria: string;
-  contato: string;
-  telefone: string;
-  email: string;
-  prazoMedio: number; // dias
-  avaliacaoQualidade: number; // 1-5
+  createdAt?: string;
+  prazoMedio?: number | null;
+  avaliacaoQualidade?: number | null;
   totalEntregas: number;
   totalPago: number;
 }
 
-const STORAGE_KEY = 'buildwise_fornecedores';
-const ENTREGAS_KEY = 'buildwise_entregas';
+export interface Entrega {
+  id: string;
+  fornecedorId: string | null;
+  obraId: string | null;
+  nomeObra?: string | null;
+  material?: string | null;
+  quantidade?: number | null;
+  unidade?: string | null;
+  valorTotal?: number | null;
+  status?: string | null;
+  dataEntrega?: string | null;
+  prazoEntrega?: number | null;
+}
 
-const fornecedoresIniciais: Fornecedor[] = [
-  {
-    id: '1',
-    nome: 'Cimentos Brasil Ltda',
-    cnpj: '12.345.678/0001-90',
-    categoria: 'Materiais de Construção',
-    contato: 'João Silva',
-    telefone: '(11) 98765-4321',
-    email: 'joao@cimentosbrasil.com',
-    prazoMedio: 7,
-    avaliacaoQualidade: 5,
-    totalEntregas: 15,
-    totalPago: 125000,
-  },
-  {
-    id: '2',
-    nome: 'Ferragens ABC',
-    cnpj: '98.765.432/0001-10',
-    categoria: 'Ferragens',
-    contato: 'Maria Santos',
-    telefone: '(11) 91234-5678',
-    email: 'maria@ferragensabc.com',
-    prazoMedio: 5,
-    avaliacaoQualidade: 4,
-    totalEntregas: 22,
-    totalPago: 89000,
-  },
-];
+const calculatePrazoEntrega = (
+  pedido?: string | null,
+  prevista?: string | null,
+  real?: string | null
+) => {
+  const start = pedido ?? prevista;
+  const end = real ?? prevista;
 
-const entregasIniciais: Entrega[] = [
-  {
-    id: '1',
-    fornecedorId: '1',
-    obraId: '1',
-    nomeObra: 'Residencial Vila Nova',
-    material: 'Cimento CP-III',
-    quantidade: 200,
-    unidade: 'sacos',
-    valorTotal: 15000,
-    dataEntrega: '2025-10-08',
-    prazoEntrega: 7,
-    status: 'entregue',
-  },
-  {
-    id: '2',
-    fornecedorId: '2',
-    obraId: '2',
-    nomeObra: 'Comercial Centro',
-    material: 'Ferragem 10mm',
-    quantidade: 500,
-    unidade: 'kg',
-    valorTotal: 8500,
-    dataEntrega: '2025-10-10',
-    prazoEntrega: 5,
-    status: 'entregue',
-  },
-];
+  if (!start || !end) return null;
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+
+  if (Number.isNaN(startDate.valueOf()) || Number.isNaN(endDate.valueOf())) {
+    return null;
+  }
+
+  return Math.max(
+    0,
+    Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+  );
+};
+
+const mapEntregaRow = (row: Record<string, any>): Entrega => {
+  const valorTotal = row.valor_total ?? row.valorTotal;
+  const pedido = row.data_pedido ?? row.dataPedido;
+  const prevista = row.data_entrega_prevista ?? row.dataEntrega ?? null;
+  const real = row.data_entrega_real ?? null;
+
+  return {
+    id: row.id,
+    fornecedorId: row.fornecedor_id ?? row.fornecedorId ?? null,
+    obraId: row.obra_id ?? row.obraId ?? null,
+    nomeObra: row.obras?.nome ?? row.nome_obra ?? row.nomeObra ?? null,
+    material: row.material ?? null,
+    quantidade: row.quantidade ?? null,
+    unidade: row.unidade ?? null,
+    valorTotal: typeof valorTotal === "number" ? valorTotal : Number(valorTotal ?? 0),
+    status: row.status ?? null,
+    dataEntrega: row.data_entrega_prevista ?? row.data_entrega ?? row.dataEntrega ?? null,
+    prazoEntrega: calculatePrazoEntrega(pedido, prevista, real),
+  };
+};
+
+const fetchEntregas = async (): Promise<Entrega[]> => {
+  const tryFornecedorEntregas = await supabase
+    .from("fornecedor_entregas")
+    .select("*, obras (nome)")
+    .order("created_at", { ascending: false });
+
+  if (tryFornecedorEntregas.error) {
+    if (tryFornecedorEntregas.error.code !== "42P01") {
+      throw tryFornecedorEntregas.error;
+    }
+
+    const fallback = await supabase
+      .from("entregas")
+      .select("*, obras (nome)")
+      .order("created_at", { ascending: false });
+
+    if (fallback.error) {
+      throw fallback.error;
+    }
+
+    return (fallback.data ?? []).map((row) => mapEntregaRow(row as Record<string, any>));
+  }
+
+  return (tryFornecedorEntregas.data ?? []).map((row) =>
+    mapEntregaRow(row as Record<string, any>)
+  );
+};
+
+const buildFornecedorPayload = (dados: FornecedorFormData) => {
+  const payload: Record<string, any> = {
+    nome: dados.nome,
+    cnpj: dados.cnpj ?? null,
+    categoria: dados.categoria ?? null,
+    contato: dados.contato ?? null,
+    telefone: dados.telefone ?? null,
+    email: dados.email ?? null,
+  };
+
+  if (dados.prazoMedio !== undefined) {
+    payload.prazo_medio_dias = dados.prazoMedio;
+  }
+
+  if (dados.avaliacaoQualidade !== undefined) {
+    payload.avaliacao_qualidade = dados.avaliacaoQualidade;
+  }
+
+  return payload;
+};
 
 export const useFornecedores = () => {
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
-  const [entregas, setEntregas] = useState<Entrega[]>([]);
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const savedFornecedores = localStorage.getItem(STORAGE_KEY);
-    const savedEntregas = localStorage.getItem(ENTREGAS_KEY);
-    
-    if (savedFornecedores) {
-      setFornecedores(JSON.parse(savedFornecedores));
-    } else {
-      setFornecedores(fornecedoresIniciais);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(fornecedoresIniciais));
-    }
+  const { data, isLoading } = useQuery({
+    queryKey: ["fornecedores"],
+    queryFn: async () => {
+      const [fornecedoresResposta, entregas] = await Promise.all([
+        supabase.from("fornecedores").select("*").order("created_at", { ascending: false }),
+        fetchEntregas(),
+      ]);
 
-    if (savedEntregas) {
-      setEntregas(JSON.parse(savedEntregas));
-    } else {
-      setEntregas(entregasIniciais);
-      localStorage.setItem(ENTREGAS_KEY, JSON.stringify(entregasIniciais));
-    }
-  }, []);
+      if (fornecedoresResposta.error) {
+        throw fornecedoresResposta.error;
+      }
 
-  const saveFornecedores = (novosFornecedores: Fornecedor[]) => {
-    setFornecedores(novosFornecedores);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(novosFornecedores));
-  };
+      return {
+        fornecedores: fornecedoresResposta.data ?? [],
+        entregas,
+      };
+    },
+  });
 
-  const saveEntregas = (novasEntregas: Entrega[]) => {
-    setEntregas(novasEntregas);
-    localStorage.setItem(ENTREGAS_KEY, JSON.stringify(novasEntregas));
-  };
+  const fornecedores = useMemo<Fornecedor[]>(() => {
+    const base = data?.fornecedores ?? [];
+    const entregas = data?.entregas ?? [];
 
-  const addFornecedor = (fornecedor: Omit<Fornecedor, 'id' | 'totalEntregas' | 'totalPago'>) => {
-    const novoFornecedor: Fornecedor = {
-      ...fornecedor,
-      id: Date.now().toString(),
-      totalEntregas: 0,
-      totalPago: 0,
-    };
-    saveFornecedores([...fornecedores, novoFornecedor]);
-    toast({ title: 'Fornecedor cadastrado com sucesso!' });
-    return novoFornecedor;
-  };
+    return base.map((row: Record<string, any>) => {
+      const relacionadas = entregas.filter((entrega) => entrega.fornecedorId === row.id);
+      const totalPago = relacionadas.reduce(
+        (acc, entrega) => acc + (entrega.valorTotal ?? 0),
+        0
+      );
 
-  const updateFornecedor = (id: string, dados: Partial<Fornecedor>) => {
-    const novosFornecedores = fornecedores.map((f) => (f.id === id ? { ...f, ...dados } : f));
-    saveFornecedores(novosFornecedores);
-    toast({ title: 'Fornecedor atualizado com sucesso!' });
-  };
+      return {
+        id: row.id,
+        nome: row.nome,
+        cnpj: row.cnpj ?? null,
+        categoria: row.categoria ?? null,
+        contato: row.contato ?? null,
+        telefone: row.telefone ?? null,
+        email: row.email ?? null,
+        createdAt: row.created_at,
+        prazoMedio: row.prazo_medio_dias ?? row.prazoMedio ?? null,
+        avaliacaoQualidade: row.avaliacao_qualidade ?? row.avaliacaoQualidade ?? null,
+        totalEntregas: relacionadas.length,
+        totalPago,
+      } satisfies Fornecedor;
+    });
+  }, [data]);
 
-  const deleteFornecedor = (id: string) => {
-    saveFornecedores(fornecedores.filter((f) => f.id !== id));
-    toast({ title: 'Fornecedor excluído com sucesso!' });
-  };
+  const entregas = useMemo(() => data?.entregas ?? [], [data]);
 
-  const addEntrega = (entrega: Omit<Entrega, 'id'>) => {
-    const novaEntrega: Entrega = {
-      ...entrega,
-      id: Date.now().toString(),
-    };
-    saveEntregas([...entregas, novaEntrega]);
+  const addFornecedorMutation = useMutation({
+    mutationFn: async (dados: FornecedorFormData) => {
+      const payload = buildFornecedorPayload(dados);
+      const tentativa = await supabase.from("fornecedores").insert([payload]);
 
-    // Atualizar totais do fornecedor
-    const fornecedor = fornecedores.find((f) => f.id === entrega.fornecedorId);
-    if (fornecedor) {
-      updateFornecedor(entrega.fornecedorId, {
-        totalEntregas: fornecedor.totalEntregas + 1,
-        totalPago: fornecedor.totalPago + entrega.valorTotal,
-      });
-    }
+      if (tentativa.error?.code === "42703") {
+        delete payload.prazo_medio_dias;
+        delete payload.avaliacao_qualidade;
+        const fallback = await supabase.from("fornecedores").insert([payload]);
+        if (fallback.error) throw fallback.error;
+        return;
+      }
 
-    toast({ title: 'Entrega registrada com sucesso!' });
-    return novaEntrega;
-  };
+      if (tentativa.error) {
+        throw tentativa.error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fornecedores"] });
+      toast.success("Fornecedor cadastrado com sucesso");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao cadastrar fornecedor:", error);
+      toast.error(error?.message ?? "Não foi possível cadastrar o fornecedor");
+    },
+  });
 
-  const updateEntrega = (id: string, dados: Partial<Entrega>) => {
-    const novasEntregas = entregas.map((e) => (e.id === id ? { ...e, ...dados } : e));
-    saveEntregas(novasEntregas);
-    toast({ title: 'Entrega atualizada com sucesso!' });
-  };
+  const updateFornecedorMutation = useMutation({
+    mutationFn: async ({ id, dados }: { id: string; dados: FornecedorFormData }) => {
+      const payload = buildFornecedorPayload(dados);
+      const tentativa = await supabase
+        .from("fornecedores")
+        .update(payload)
+        .eq("id", id);
 
-  const deleteEntrega = (id: string) => {
-    saveEntregas(entregas.filter((e) => e.id !== id));
-    toast({ title: 'Entrega excluída com sucesso!' });
-  };
+      if (tentativa.error?.code === "42703") {
+        delete payload.prazo_medio_dias;
+        delete payload.avaliacao_qualidade;
+        const fallback = await supabase
+          .from("fornecedores")
+          .update(payload)
+          .eq("id", id);
+        if (fallback.error) throw fallback.error;
+        return;
+      }
 
-  const getEntregasPorFornecedor = (fornecedorId: string) => {
-    return entregas.filter((e) => e.fornecedorId === fornecedorId);
-  };
+      if (tentativa.error) {
+        throw tentativa.error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fornecedores"] });
+      toast.success("Fornecedor atualizado");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao atualizar fornecedor:", error);
+      toast.error(error?.message ?? "Não foi possível atualizar o fornecedor");
+    },
+  });
+
+  const deleteFornecedorMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("fornecedores").delete().eq("id", id);
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fornecedores"] });
+      toast.success("Fornecedor excluído");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao excluir fornecedor:", error);
+      toast.error(error?.message ?? "Não foi possível excluir o fornecedor");
+    },
+  });
+
+  const addEntregaMutation = useMutation({
+    mutationFn: async (dados: Omit<Entrega, "id" | "nomeObra">) => {
+      const payload: Record<string, any> = {
+        fornecedor_id: dados.fornecedorId,
+        obra_id: dados.obraId,
+        material: dados.material ?? null,
+        quantidade: dados.quantidade ?? null,
+        unidade: dados.unidade ?? null,
+        valor_total: dados.valorTotal ?? null,
+        status: dados.status ?? "pendente",
+        data_entrega_prevista: dados.dataEntrega ?? null,
+      };
+
+      const tentativa = await supabase
+        .from("fornecedor_entregas")
+        .insert([payload])
+        .select("id")
+        .single();
+
+      if (tentativa.error?.code === "42P01") {
+        const fallbackPayload = {
+          fornecedor_id: dados.fornecedorId,
+          obra_id: dados.obraId,
+          material: dados.material ?? null,
+          quantidade: dados.quantidade ?? null,
+          unidade: dados.unidade ?? null,
+          valor_total: dados.valorTotal ?? null,
+          status: dados.status ?? "pendente",
+          data_entrega: dados.dataEntrega ?? null,
+        };
+
+        const fallback = await supabase
+          .from("entregas")
+          .insert([fallbackPayload])
+          .select("id")
+          .single();
+
+        if (fallback.error) {
+          throw fallback.error;
+        }
+        return fallback.data as Record<string, any>;
+      }
+
+      if (tentativa.error) {
+        throw tentativa.error;
+      }
+
+      return tentativa.data as Record<string, any>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fornecedores"] });
+      toast.success("Entrega registrada");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao registrar entrega:", error);
+      toast.error(error?.message ?? "Não foi possível registrar a entrega");
+    },
+  });
+
+  const updateEntregaMutation = useMutation({
+    mutationFn: async ({ id, dados }: { id: string; dados: Partial<Entrega> }) => {
+      const tentativa = await supabase
+        .from("fornecedor_entregas")
+        .update({
+          status: dados.status ?? null,
+          valor_total: dados.valorTotal ?? null,
+          quantidade: dados.quantidade ?? null,
+          unidade: dados.unidade ?? null,
+          data_entrega_real: dados.dataEntrega ?? null,
+        })
+        .eq("id", id);
+
+      if (tentativa.error?.code === "42P01") {
+        const fallback = await supabase
+          .from("entregas")
+          .update({
+            status: dados.status ?? null,
+            valor_total: dados.valorTotal ?? null,
+            quantidade: dados.quantidade ?? null,
+            unidade: dados.unidade ?? null,
+            data_entrega: dados.dataEntrega ?? null,
+          })
+          .eq("id", id);
+
+        if (fallback.error) throw fallback.error;
+        return;
+      }
+
+      if (tentativa.error) {
+        throw tentativa.error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fornecedores"] });
+      toast.success("Entrega atualizada");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao atualizar entrega:", error);
+      toast.error(error?.message ?? "Não foi possível atualizar a entrega");
+    },
+  });
+
+  const deleteEntregaMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const tentativa = await supabase
+        .from("fornecedor_entregas")
+        .delete()
+        .eq("id", id);
+
+      if (tentativa.error?.code === "42P01") {
+        const fallback = await supabase.from("entregas").delete().eq("id", id);
+        if (fallback.error) throw fallback.error;
+        return;
+      }
+
+      if (tentativa.error) {
+        throw tentativa.error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fornecedores"] });
+      toast.success("Entrega removida");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao excluir entrega:", error);
+      toast.error(error?.message ?? "Não foi possível excluir a entrega");
+    },
+  });
 
   return {
     fornecedores,
     entregas,
-    addFornecedor,
-    updateFornecedor,
-    deleteFornecedor,
-    addEntrega,
-    updateEntrega,
-    deleteEntrega,
-    getEntregasPorFornecedor,
+    isLoading,
+    addFornecedor: addFornecedorMutation.mutateAsync,
+    updateFornecedor: (id: string, dados: FornecedorFormData) =>
+      updateFornecedorMutation.mutateAsync({ id, dados }),
+    deleteFornecedor: deleteFornecedorMutation.mutateAsync,
+    addEntrega: addEntregaMutation.mutateAsync,
+    updateEntrega: (id: string, dados: Partial<Entrega>) =>
+      updateEntregaMutation.mutateAsync({ id, dados }),
+    deleteEntrega: deleteEntregaMutation.mutateAsync,
+    getEntregasPorFornecedor: (fornecedorId: string) =>
+      entregas.filter((entrega) => entrega.fornecedorId === fornecedorId),
   };
 };

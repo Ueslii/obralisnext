@@ -177,6 +177,7 @@ export type Database = {
           etapa: string | null;
           id: string;
           obra_id: string | null;
+          membro_id: string | null;
           tipo: string;
           user_id: string | null;
           valor: number;
@@ -189,6 +190,7 @@ export type Database = {
           etapa?: string | null;
           id?: string;
           obra_id?: string | null;
+          membro_id?: string | null;
           tipo: string;
           user_id?: string | null;
           valor: number;
@@ -201,6 +203,7 @@ export type Database = {
           etapa?: string | null;
           id?: string;
           obra_id?: string | null;
+          membro_id?: string | null;
           tipo?: string;
           user_id?: string | null;
           valor?: number;
@@ -211,6 +214,13 @@ export type Database = {
             columns: ["obra_id"];
             isOneToOne: false;
             referencedRelation: "obras";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "lancamentos_membro_id_fkey";
+            columns: ["membro_id"];
+            isOneToOne: false;
+            referencedRelation: "membros";
             referencedColumns: ["id"];
           },
           {
@@ -327,6 +337,123 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      obra_etapas: {
+        Row: {
+          created_at: string;
+          custo_previsto: number | null;
+          custo_real: number | null;
+          data_fim: string | null;
+          data_inicio: string | null;
+          descricao: string | null;
+          id: string;
+          nome: string;
+          obra_id: string;
+          ordem: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          custo_previsto?: number | null;
+          custo_real?: number | null;
+          data_fim?: string | null;
+          data_inicio?: string | null;
+          descricao?: string | null;
+          id?: string;
+          nome: string;
+          obra_id: string;
+          ordem?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          custo_previsto?: number | null;
+          custo_real?: number | null;
+          data_fim?: string | null;
+          data_inicio?: string | null;
+          descricao?: string | null;
+          id?: string;
+          nome?: string;
+          obra_id?: string;
+          ordem?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "obra_etapas_obra_id_fkey";
+            columns: ["obra_id"];
+            isOneToOne: false;
+            referencedRelation: "obras";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      obra_insumos: {
+        Row: {
+          data_entrada: string | null;
+          fornecedor_id: string | null;
+          fornecedor_nome: string | null;
+          id: string;
+          material: string;
+          obra_id: string;
+          quantidade_total: number;
+          quantidade_usada: number | null;
+          unidade: string;
+          updated_at: string | null;
+          valor_unitario: number | null;
+          etapa_id: string | null;
+        };
+        Insert: {
+          data_entrada?: string | null;
+          fornecedor_id?: string | null;
+          fornecedor_nome?: string | null;
+          id?: string;
+          material: string;
+          obra_id: string;
+          quantidade_total: number;
+          quantidade_usada?: number | null;
+          unidade: string;
+          updated_at?: string | null;
+          valor_unitario?: number | null;
+          etapa_id?: string | null;
+        };
+        Update: {
+          data_entrada?: string | null;
+          fornecedor_id?: string | null;
+          fornecedor_nome?: string | null;
+          id?: string;
+          material?: string;
+          obra_id?: string;
+          quantidade_total?: number;
+          quantidade_usada?: number | null;
+          unidade?: string;
+          updated_at?: string | null;
+          valor_unitario?: number | null;
+          etapa_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "obra_insumos_fornecedor_id_fkey";
+            columns: ["fornecedor_id"];
+            isOneToOne: false;
+            referencedRelation: "fornecedores";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "obra_insumos_obra_id_fkey";
+            columns: ["obra_id"];
+            isOneToOne: false;
+            referencedRelation: "obras";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "obra_insumos_etapa_id_fkey";
+            columns: ["etapa_id"];
+            isOneToOne: false;
+            referencedRelation: "obra_etapas";
             referencedColumns: ["id"];
           }
         ];

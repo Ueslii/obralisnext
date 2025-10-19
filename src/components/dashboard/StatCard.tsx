@@ -1,13 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StatCardProps {
   title: string;
   value: string;
   icon: LucideIcon;
   description: string;
-  isLoading?: boolean; // Adicionando a propriedade isLoading
+  isLoading?: boolean;
+  valueClassName?: string;
 }
 
 const StatCard = ({
@@ -16,6 +18,7 @@ const StatCard = ({
   icon: Icon,
   description,
   isLoading,
+  valueClassName,
 }: StatCardProps) => {
   return (
     <Card>
@@ -32,7 +35,9 @@ const StatCard = ({
           </>
         ) : (
           <>
-            <div className="text-2xl font-bold">{value}</div>
+            <div className={cn("text-2xl font-bold", valueClassName)}>
+              {value}
+            </div>
             <p className="text-xs text-muted-foreground">{description}</p>
           </>
         )}

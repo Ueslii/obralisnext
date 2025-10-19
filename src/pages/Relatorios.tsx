@@ -5,8 +5,6 @@ import { useObras } from "@/hooks/useObras";
 import { useFinanceiro } from "@/hooks/useFinanceiro";
 import { useEquipes } from "@/hooks/useEquipes";
 // A importação foi corrigida para usar 'generatePDF'
-import { generatePDF } from "@/lib/pdfGenerator";
-
 export default function Relatorios() {
   const { obras, isLoading: isLoadingObras } = useObras();
   const {
@@ -27,7 +25,7 @@ export default function Relatorios() {
       );
       return;
     }
-    // A chamada da função foi corrigida para usar 'generatePDF'
+    const { generatePDF } = await import("@/lib/pdfGenerator");
     await generatePDF(obras, lancamentos, membros);
   };
 

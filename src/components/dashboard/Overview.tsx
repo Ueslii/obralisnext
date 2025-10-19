@@ -1,142 +1,197 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
+import { format } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
 } from "recharts";
-import { DateRange } from "react-day-picker";
 
-import { addDays } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CalendarDateRangePicker } from "./DateRangerPicker";
-import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Obra } from "@/hooks/useObras";
 
 interface OverviewProps {
-  date: DateRange;
-  setDate: React.Dispatch<React.SetStateAction<DateRange>>;
-  despesasPorCategoria: any[];
+  dateRange?: DateRange;
+  despesasPorCategoria: { category: string; value: number }[];
+  obras: Obra[];
   isLoading: boolean;
+  isLoadingObras: boolean;
 }
 
-export function Overview({
-  date,
-  setDate,
-  despesasPorCategoria,
-  isLoading,
-}: OverviewProps) {
-  if (isLoading) return <p>Carregando dados...</p>;
-  const [costData, setCostData] = useState<any[]>([]);
-  const [progressData, setProgressData] = useState<any[]>([]);
+const formatCurrency = (valor: number) =>
+  `R$ ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-  const totalCosts = despesasPorCategoria.reduce(
-    (sum, item) => sum + item.value,
-    0
+export function Overview({
+  dateRange,
+  despesasPorCategoria,
+  obras,
+  isLoading,
+  isLoadingObras,
+}: OverviewProps) {
+  const totalCosts = useMemo(
+    () =>
+      despesasPorCategoria.reduce(
+        (acc, categoria) => acc + categoria.value,
+        0
+      ),
+    [despesasPorCategoria]
   );
+
+  const periodoLabel = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) {
+      return "Ultimos 30 dias";
+    }
+
+    return `${format(dateRange.from, "dd/MM/yyyy")} - ${format(
+      dateRange.to,
+      "dd/MM/yyyy"
+    )}`;
+  }, [dateRange]);
 
   return (
     <div className="w-full space-y-6">
-      {/* 🔹 Filtro de Período */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold">Visão Geral</h1>
-        <div className="flex items-center space-x-2">
-          <CalendarDateRangePicker date={date} setDate={setDate} />
-          <Button variant="outline" onClick={() => setDate(undefined)}>
-            Limpar Filtro
-          </Button>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-xl font-semibold">Resumo Operacional</h3>
+          <p className="text-sm text-muted-foreground">
+            Periodo selecionado: {periodoLabel}
+          </p>
         </div>
+        <Button asChild variant="outline">
+          <Link to="/obras">Ver todas as obras</Link>
+        </Button>
       </div>
 
-      {/* 🔹 Gráficos lado a lado */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 📊 Obras em Andamento */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="p-4 rounded-2xl shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">🏗️ Obras em Andamento</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Acompanhe o progresso das suas obras
+          <h4 className="text-lg font-semibold mb-2">Obras em andamento</h4>
+          <p className="text-sm text-muted-foreground mb-4">
+            Acompanhe o progresso de cada projeto ativo.
           </p>
 
-          {progressData.map((obra, i) => (
-            <div key={i} className="mb-4">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-gray-800">{obra.obra}</span>
-                <span className="text-green-600">{obra.status}</span>
-              </div>
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-2 bg-orange-500 rounded-full transition-all"
-                  style={{ width: `${obra.progress}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Prazo: {obra.prazo}</span>
-                <span>{obra.progress}%</span>
-              </div>
+          {isLoadingObras ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-2 w-full" />
+                  <Skeleton className="h-3 w-56" />
+                </div>
+              ))}
             </div>
-          ))}
-          <Link to="/obras">
-            <Button variant="outline" className="w-full mt-2">
-              Ver todas as obras
-            </Button>
-          </Link>
+          ) : obras.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma obra em andamento neste periodo.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {obras.map((obra) => {
+                const statusLabel = obra.status
+                  .split("_")
+                  .map(
+                    (parte) =>
+                      parte.charAt(0).toUpperCase() + parte.slice(1).toLowerCase()
+                  )
+                  .join(" ");
+
+                return (
+                  <div key={obra.id} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-foreground">
+                        {obra.nome}
+                      </span>
+                      <span className="text-emerald-600">
+                        {obra.progresso ?? 0}% concluido
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-2 rounded-full bg-orange-500 transition-all"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.max(Number(obra.progresso) || 0, 0)
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        Prazo:{" "}
+                        {obra.prazo
+                          ? new Date(obra.prazo).toLocaleDateString("pt-BR")
+                          : "Sem data"}
+                      </span>
+                      <span>Status: {statusLabel}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
-        {/* 💰 Visão Geral de Custos */}
         <Card className="p-4 rounded-2xl shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">
-            💰 Visão Geral de Custos
-          </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Distribuição de despesas do período
+          <h4 className="text-lg font-semibold mb-2">
+            Distribuicao de custos
+          </h4>
+          <p className="text-sm text-muted-foreground mb-4">
+            Entenda onde os recursos foram aplicados no periodo.
           </p>
 
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart
-              data={despesasPorCategoria}
-              layout="vertical"
-              margin={{ left: 30, right: 20 }}
-            >
-              <XAxis
-                type="number"
-                stroke="#888888"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `R$ ${value.toLocaleString("pt-BR")}`}
-              />
-              <YAxis
-                dataKey="category"
-                type="category"
-                stroke="#888888"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip
-                formatter={(value: number) =>
-                  `R$ ${value.toLocaleString("pt-BR")}`
-                }
-              />
-              <Bar
-                dataKey="value"
-                fill="#ff6a00"
-                radius={[4, 4, 4, 4]}
-                barSize={20}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          {isLoading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : despesasPorCategoria.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma despesa registrada no periodo selecionado.
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart
+                data={despesasPorCategoria}
+                layout="vertical"
+                margin={{ left: 40, right: 20 }}
+              >
+                <XAxis
+                  type="number"
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(valor: number) =>
+                    `R$ ${valor.toLocaleString("pt-BR")}`
+                  }
+                />
+                <YAxis
+                  dataKey="category"
+                  type="category"
+                  stroke="#888888"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  width={120}
+                />
+                <Tooltip
+                  cursor={{ fill: "rgba(79, 70, 229, 0.08)" }}
+                  formatter={(valor: number) => formatCurrency(valor)}
+                  labelFormatter={(categoria: string) => categoria}
+                />
+                <Bar dataKey="value" fill="#f97316" radius={[4, 4, 4, 4]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
 
-          <div className="mt-4 border-t pt-2 flex justify-between text-sm text-gray-700">
+          <div className="mt-4 flex items-center justify-between border-t pt-3 text-sm font-medium text-foreground">
             <span>Total</span>
-            <span className="font-medium">
-              R$ {totalCosts.toLocaleString("pt-BR")}
-            </span>
+            <span>{formatCurrency(totalCosts)}</span>
           </div>
         </Card>
       </div>

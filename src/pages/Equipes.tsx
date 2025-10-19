@@ -34,8 +34,11 @@ export default function Equipes() {
     membros,
     isLoading,
     addMembro,
+    addMembroPending,
     updateMembro,
+    updateMembroPending,
     deleteMembro,
+    deleteMembroPending,
     calcularFolhaPagamento,
   } = useEquipes();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -48,19 +51,27 @@ export default function Equipes() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = (
+  const handleSave = async (
     dados: NewMembro | (Partial<Membro> & { id: string })
   ) => {
-    if ("id" in dados && dados.id) {
-      updateMembro(dados as { id: string } & Partial<Membro>);
-    } else {
-      addMembro(dados as NewMembro);
+    try {
+      if ("id" in dados && dados.id) {
+        await updateMembro(dados as { id: string } & Partial<Membro>);
+      } else {
+        await addMembro(dados as NewMembro);
+      }
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Erro ao salvar membro:", error);
     }
-    setIsDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    deleteMembro(id);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMembro(id);
+    } catch (error) {
+      console.error("Erro ao excluir membro:", error);
+    }
   };
 
   const folhaPagamento = calcularFolhaPagamento();
@@ -143,16 +154,19 @@ export default function Equipes() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() => handleOpenDialog(membro)}
-                          >
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDelete(membro.id)}
-                          >
-                            Excluir
+                  <DropdownMenuItem
+                    onClick={() => handleOpenDialog(membro)}
+                  >
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    disabled={deleteMembroPending}
+                    onClick={() => {
+                      void handleDelete(membro.id);
+                    }}
+                  >
+                    Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -177,6 +191,9 @@ export default function Equipes() {
           onOpenChange={setIsDialogOpen}
           onSave={handleSave}
           membro={membroSelecionado}
+          isSubmitting={
+            addMembroPending || updateMembroPending || deleteMembroPending
+          }
         />
       )}
     </div>

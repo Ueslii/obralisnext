@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
-export type UserRole = 'admin' | 'engenheiro' | 'gestor' | 'usuario';
+export type UserRole = "admin" | "engenheiro" | "gestor" | "usuario";
 
 export interface Permission {
   obras: {
@@ -84,26 +88,77 @@ const rolePermissions: Record<UserRole, Permission> = {
 };
 
 export const usePermissions = () => {
-  const [userRole, setUserRole] = useState<UserRole>('admin');
-  const [permissions, setPermissions] = useState<Permission>(rolePermissions.admin);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const savedRole = localStorage.getItem('buildwise_user_role') as UserRole;
-    if (savedRole && rolePermissions[savedRole]) {
-      setUserRole(savedRole);
-      setPermissions(rolePermissions[savedRole]);
-    }
-  }, []);
+  const rolesQuery = useQuery<{ role: UserRole }[]>({
+    queryKey: ["user_roles", user?.id],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user?.id ?? "");
 
-  const changeRole = (role: UserRole) => {
-    setUserRole(role);
-    setPermissions(rolePermissions[role]);
-    localStorage.setItem('buildwise_user_role', role);
+      if (error) {
+        throw error;
+      }
+
+      return data as { role: UserRole }[];
+    },
+  });
+
+  const userRole: UserRole = rolesQuery.data?.[0]?.role ?? "usuario";
+  const permissions = rolePermissions[userRole];
+
+  const changeRoleMutation = useMutation({
+    mutationFn: async (role: UserRole) => {
+      if (!user?.id) {
+        throw new Error("Usuário não autenticado");
+      }
+
+      const { error: deleteError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      const { error: insertError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: user.id, role });
+
+      if (insertError) {
+        throw insertError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user_roles", user?.id] });
+      toast.success("Perfil atualizado");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao atualizar perfil de acesso:", error);
+      toast.error(error?.message ?? "Não foi possível atualizar as permissões");
+    },
+  });
+
+  const hasPermission = useMemo(
+    () =>
+      (module: keyof Permission, action: string): boolean => {
+        const modulo = permissions[module];
+        if (!modulo) return false;
+        return Boolean(modulo[action as keyof typeof modulo]);
+      },
+    [permissions]
+  );
+
+  return {
+    userRole,
+    permissions,
+    isLoading: rolesQuery.isLoading,
+    changeRole: changeRoleMutation.mutateAsync,
+    hasPermission,
   };
-
-  const hasPermission = (module: keyof Permission, action: string): boolean => {
-    return permissions[module]?.[action as keyof typeof permissions[typeof module]] || false;
-  };
-
-  return { userRole, permissions, changeRole, hasPermission };
 };

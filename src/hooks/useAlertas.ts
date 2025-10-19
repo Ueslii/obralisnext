@@ -1,98 +1,196 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export type AlertaSeveridade = "alta" | "media" | "baixa";
 
 export interface Alerta {
   id: string;
-  tipo: 'margem_negativa' | 'despesa_acima' | 'obra_atrasada' | 'info';
+  tipo: string;
   titulo: string;
   descricao: string;
-  obraId?: string;
-  nomeObra?: string;
-  severidade: 'alta' | 'media' | 'baixa';
+  obraId: string | null;
+  nomeObra?: string | null;
+  severidade: AlertaSeveridade;
   data: string;
   lido: boolean;
-  acao?: string;
+  acao?: string | null;
 }
 
-const STORAGE_KEY = 'buildwise_alertas';
+export interface CreateAlertaInput {
+  titulo: string;
+  descricao?: string;
+  tipo?: string;
+  obraId?: string | null;
+  severidade?: AlertaSeveridade;
+  acao?: string | null;
+}
 
-const alertasIniciais: Alerta[] = [
-  {
-    id: '1',
-    tipo: 'despesa_acima',
-    titulo: 'Despesa acima do previsto',
-    descricao: 'A obra Residencial Vila Nova ultrapassou 10% do orçamento previsto na etapa de Fundação',
-    obraId: '1',
-    nomeObra: 'Residencial Vila Nova',
-    severidade: 'media',
-    data: new Date().toISOString(),
-    lido: false,
-    acao: 'Revisar orçamento',
-  },
-  {
-    id: '2',
-    tipo: 'obra_atrasada',
-    titulo: 'Obra com possível atraso',
-    descricao: 'Comercial Centro está com progresso de 40% mas já passou 50% do prazo',
-    obraId: '2',
-    nomeObra: 'Comercial Centro',
-    severidade: 'alta',
-    data: new Date().toISOString(),
-    lido: false,
-    acao: 'Ajustar cronograma',
-  },
-];
+const mapSeveridade = (value?: string | null): AlertaSeveridade => {
+  if (value === "alta" || value === "media" || value === "baixa") {
+    return value;
+  }
+  return "baixa";
+};
+
+const mapAlert = (
+  row: Record<string, any>
+): Alerta => {
+  return {
+    id: row.id,
+    tipo: row.tipo ?? "info",
+    titulo: row.titulo,
+    descricao: row.descricao ?? "",
+    obraId: row.obra_id ?? null,
+    nomeObra: row.obras?.nome ?? null,
+    severidade: mapSeveridade(row.severidade),
+    data: row.created_at ?? new Date().toISOString(),
+    lido: Boolean(row.lido),
+    acao: row.acao ?? null,
+  };
+};
 
 export const useAlertas = () => {
-  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setAlertas(JSON.parse(saved));
-    } else {
-      setAlertas(alertasIniciais);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(alertasIniciais));
-    }
-  }, []);
+  const { data: alertas = [], isLoading } = useQuery<Alerta[]>({
+    queryKey: ["alertas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("alertas")
+        .select("*, obras (nome)")
+        .order("created_at", { ascending: false });
 
-  const saveAlertas = (novosAlertas: Alerta[]) => {
-    setAlertas(novosAlertas);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(novosAlertas));
-  };
+      if (error) {
+        console.error("Erro ao carregar alertas:", error);
+        throw error;
+      }
 
-  const addAlerta = (alerta: Omit<Alerta, 'id' | 'data' | 'lido'>) => {
-    const novoAlerta: Alerta = {
-      ...alerta,
-      id: Date.now().toString(),
-      data: new Date().toISOString(),
-      lido: false,
-    };
-    saveAlertas([novoAlerta, ...alertas]);
-    return novoAlerta;
-  };
+      return (data ?? []).map(mapAlert);
+    },
+  });
 
-  const marcarComoLido = (id: string) => {
-    const novosAlertas = alertas.map((a) => (a.id === id ? { ...a, lido: true } : a));
-    saveAlertas(novosAlertas);
-  };
+  const addMutation = useMutation({
+    mutationFn: async (payload: CreateAlertaInput) => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-  const marcarTodosComoLidos = () => {
-    const novosAlertas = alertas.map((a) => ({ ...a, lido: true }));
-    saveAlertas(novosAlertas);
-  };
+      if (userError) {
+        throw userError;
+      }
 
-  const deleteAlerta = (id: string) => {
-    saveAlertas(alertas.filter((a) => a.id !== id));
-  };
+      const basePayload: Record<string, any> = {
+        titulo: payload.titulo,
+        descricao: payload.descricao ?? null,
+        tipo: payload.tipo ?? "info",
+        obra_id: payload.obraId ?? null,
+        severidade: payload.severidade ?? "media",
+        lido: false,
+        user_id: user?.id ?? null,
+      };
 
-  const getAlertasNaoLidos = () => alertas.filter((a) => !a.lido);
+      if (payload.acao) {
+        basePayload.acao = payload.acao;
+      }
+
+      const { error } = await supabase.from("alertas").insert([basePayload]);
+
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alertas"] });
+      toast.success("Alerta registrado com sucesso");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao cadastrar alerta:", error);
+      toast.error(error?.message ?? "Erro ao cadastrar alerta");
+    },
+  });
+
+  const marcarComoLidoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("alertas")
+        .update({ lido: true })
+        .eq("id", id);
+
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alertas"] });
+    },
+    onError: (error: any) => {
+      console.error("Erro ao marcar alerta como lido:", error);
+      toast.error(error?.message ?? "Não foi possível marcar como lido");
+    },
+  });
+
+  const marcarTodosComoLidosMutation = useMutation({
+    mutationFn: async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const query = supabase.from("alertas").update({ lido: true });
+      if (user?.id) {
+        query.eq("user_id", user.id);
+      }
+
+      const { error } = await query;
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alertas"] });
+    },
+    onError: (error: any) => {
+      console.error("Erro ao marcar todos os alertas como lidos:", error);
+      toast.error(error?.message ?? "Não foi possível marcar todos como lidos");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("alertas")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alertas"] });
+      toast.success("Alerta removido");
+    },
+    onError: (error: any) => {
+      console.error("Erro ao excluir alerta:", error);
+      toast.error(error?.message ?? "Não foi possível excluir o alerta");
+    },
+  });
+
+  const alertasNaoLidos = useMemo(
+    () => alertas.filter((alerta) => !alerta.lido),
+    [alertas]
+  );
 
   return {
     alertas,
-    addAlerta,
-    marcarComoLido,
-    marcarTodosComoLidos,
-    deleteAlerta,
-    getAlertasNaoLidos,
+    alertasNaoLidos,
+    isLoading,
+    addAlerta: addMutation.mutateAsync,
+    marcarComoLido: marcarComoLidoMutation.mutateAsync,
+    marcarTodosComoLidos: marcarTodosComoLidosMutation.mutateAsync,
+    deleteAlerta: deleteMutation.mutateAsync,
+    getAlertasNaoLidos: () => alertasNaoLidos,
   };
 };

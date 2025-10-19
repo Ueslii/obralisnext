@@ -1,21 +1,24 @@
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import Auth from "@/pages/Auth";
-import Landing from "@/pages/Landing";
-import NotFound from "@/pages/NotFound";
-import Dashboard from "@/pages/Dashboard";
-import Obras from "@/pages/Obras";
-import ObraDetalhes from "@/pages/ObraDetalhes";
-import Financeiro from "@/pages/Financeiro";
-import Equipes from "@/pages/Equipes";
-import Fornecedores from "@/pages/Fornecedores";
-import FornecedorDetalhes from "@/pages/FornecedorDetalhes";
-import Orcamentos from "@/pages/Orcamentos";
-import Relatorios from "@/pages/Relatorios";
-import Alertas from "@/pages/Alertas";
-import Configuracoes from "@/pages/Configuracoes";
+const AuthPage = lazy(() => import("@/pages/Auth"));
+const LandingPage = lazy(() => import("@/pages/Landing"));
+const NotFoundPage = lazy(() => import("@/pages/NotFound"));
+const DashboardPage = lazy(() => import("@/pages/Dashboard"));
+const ObrasPage = lazy(() => import("@/pages/Obras"));
+const ObraDetalhesPage = lazy(() => import("@/pages/ObraDetalhes"));
+const FinanceiroPage = lazy(() => import("@/pages/Financeiro"));
+const EquipesPage = lazy(() => import("@/pages/Equipes"));
+const FornecedoresPage = lazy(() => import("@/pages/Fornecedores"));
+const FornecedorDetalhesPage = lazy(
+  () => import("@/pages/FornecedorDetalhes")
+);
+const OrcamentosPage = lazy(() => import("@/pages/Orcamentos"));
+const RelatoriosPage = lazy(() => import("@/pages/Relatorios"));
+const AlertasPage = lazy(() => import("@/pages/Alertas"));
+const ConfiguracoesPage = lazy(() => import("@/pages/Configuracoes"));
 
 /**
  * Componente de tela de carregamento global para evitar repetição.
@@ -41,7 +44,11 @@ function AppEntry() {
 
   // Se não está carregando, decide para onde ir.
   // Se estiver autenticado, vai para o dashboard, senão, para a landing page.
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Landing />;
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <LandingPage />
+  );
 }
 
 /**
@@ -69,29 +76,34 @@ function ProtectedRoute() {
 
 function App() {
   return (
-    <Routes>
-      {/* A rota raiz agora usa o AppEntry para decidir o destino */}
-      <Route path="/" element={<AppEntry />} />
-      <Route path="/auth" element={<Auth />} />
+    <Suspense fallback={<SplashScreen />}>
+      <Routes>
+        {/* A rota raiz agora usa o AppEntry para decidir o destino */}
+        <Route path="/" element={<AppEntry />} />
+        <Route path="/auth" element={<AuthPage />} />
 
-      {/* Agrupa todas as rotas protegidas sob o `ProtectedRoute` */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/obras" element={<Obras />} />
-        <Route path="/obras/:id" element={<ObraDetalhes />} />
-        <Route path="/financeiro" element={<Financeiro />} />
-        <Route path="/equipes" element={<Equipes />} />
-        <Route path="/fornecedores" element={<Fornecedores />} />
-        <Route path="/fornecedores/:id" element={<FornecedorDetalhes />} />
-        <Route path="/orcamentos" element={<Orcamentos />} />
-        <Route path="/relatorios" element={<Relatorios />} />
-        <Route path="/alertas" element={<Alertas />} />
-        <Route path="/configuracoes" element={<Configuracoes />} />
-      </Route>
+        {/* Agrupa todas as rotas protegidas sob o `ProtectedRoute` */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/obras" element={<ObrasPage />} />
+          <Route path="/obras/:id" element={<ObraDetalhesPage />} />
+          <Route path="/financeiro" element={<FinanceiroPage />} />
+          <Route path="/equipes" element={<EquipesPage />} />
+          <Route path="/fornecedores" element={<FornecedoresPage />} />
+          <Route
+            path="/fornecedores/:id"
+            element={<FornecedorDetalhesPage />}
+          />
+          <Route path="/orcamentos" element={<OrcamentosPage />} />
+          <Route path="/relatorios" element={<RelatoriosPage />} />
+          <Route path="/alertas" element={<AlertasPage />} />
+          <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+        </Route>
 
-      {/* Rota para páginas não encontradas */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* Rota para páginas não encontradas */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </Suspense>
   );
 }
 

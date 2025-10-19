@@ -97,9 +97,12 @@ export const useEquipes = () => {
   return {
     membros,
     isLoading,
-    addMembro: addMembro.mutate,
-    updateMembro: updateMembro.mutate,
-    deleteMembro: deleteMembro.mutate,
+    addMembro: addMembro.mutateAsync,
+    addMembroPending: addMembro.isPending,
+    updateMembro: updateMembro.mutateAsync,
+    updateMembroPending: updateMembro.isPending,
+    deleteMembro: deleteMembro.mutateAsync,
+    deleteMembroPending: deleteMembro.isPending,
     calcularFolhaPagamento,
   };
 };

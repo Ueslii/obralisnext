@@ -22,8 +22,11 @@ import { Membro, NewMembro } from "@/hooks/useEquipes";
 interface MembroDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (dados: NewMembro | (Partial<Membro> & { id: string })) => void;
+  onSave: (
+    dados: NewMembro | (Partial<Membro> & { id: string })
+  ) => void | Promise<void>;
   membro?: Membro;
+  isSubmitting?: boolean;
 }
 
 export function MembroDialog({
@@ -31,8 +34,11 @@ export function MembroDialog({
   onOpenChange,
   onSave,
   membro,
+  isSubmitting,
 }: MembroDialogProps) {
   const [formData, setFormData] = useState<Partial<Membro>>({});
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
+  const submitting = internalSubmitting || Boolean(isSubmitting);
 
   useEffect(() => {
     if (membro) {
@@ -58,8 +64,14 @@ export function MembroDialog({
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = () => {
-    onSave(formData as NewMembro | (Partial<Membro> & { id: string }));
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setInternalSubmitting(true);
+    try {
+      await onSave(formData as NewMembro | (Partial<Membro> & { id: string }));
+    } finally {
+      setInternalSubmitting(false);
+    }
   };
 
   return (
@@ -128,7 +140,16 @@ export function MembroDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleSubmit}>Salvar</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "Processando..." : "Salvar"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

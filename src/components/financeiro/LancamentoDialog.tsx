@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Lancamento, NewLancamento } from "@/hooks/useFinanceiro";
 import { Obra } from "@/hooks/useObras";
+import { Membro } from "@/hooks/useEquipes";
 
 interface LancamentoDialogProps {
   open: boolean;
@@ -26,8 +27,10 @@ interface LancamentoDialogProps {
   lancamento?: Lancamento;
   onSave: (
     dados: NewLancamento | (Partial<NewLancamento> & { id: string })
-  ) => void;
+  ) => void | Promise<void>;
   obras: Obra[];
+  membros: Membro[];
+  isSubmitting?: boolean;
 }
 
 // Tipo para o estado do formulário, que pode incluir dados temporários de UI como nomeObra
@@ -41,6 +44,8 @@ export function LancamentoDialog({
   lancamento,
   onSave,
   obras,
+  membros,
+  isSubmitting,
 }: LancamentoDialogProps) {
   const [formData, setFormData] = useState<FormData>({
     obra_id: "",
@@ -50,6 +55,7 @@ export function LancamentoDialog({
     valor: 0,
     data: new Date().toISOString().split("T")[0],
     etapa: "",
+    membro_id: "",
     nomeObra: "", // Adiciona nomeObra para fins de UI
   });
 
@@ -63,6 +69,7 @@ export function LancamentoDialog({
         valor: lancamento.valor,
         data: lancamento.data,
         etapa: lancamento.etapa,
+        membro_id: lancamento.membro_id ?? "",
         nomeObra: lancamento.obras?.nome || "",
       });
     } else if (open && !lancamento) {
@@ -75,6 +82,7 @@ export function LancamentoDialog({
         valor: 0,
         data: new Date().toISOString().split("T")[0],
         etapa: "",
+        membro_id: "",
         nomeObra: "",
       });
     }
@@ -90,19 +98,59 @@ export function LancamentoDialog({
   };
 
   const handleChange = (field: keyof FormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      if (field === "categoria") {
+        const novaCategoria = value as FormData["categoria"];
+        return {
+          ...prev,
+          categoria: novaCategoria,
+          membro_id:
+            novaCategoria === "hora_extra" ? prev.membro_id ?? "" : "",
+        };
+      }
+
+      if (field === "membro_id") {
+        return {
+          ...prev,
+          membro_id: value,
+        };
+      }
+
+      return { ...prev, [field]: value };
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const { nomeObra, ...dadosParaSalvar } = formData; // Remove campo exclusivo da UI
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
+  const submitting = internalSubmitting || Boolean(isSubmitting);
+  const requiresMembro = formData.categoria === "hora_extra";
+  const canSubmit =
+    !requiresMembro ||
+    (Boolean(formData.membro_id) && membros.length > 0);
 
-    if (lancamento?.id) {
-      onSave({ id: lancamento.id, ...dadosParaSalvar });
-    } else {
-      onSave(dadosParaSalvar as NewLancamento);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting || !canSubmit) return;
+
+    const { nomeObra: _nomeObra, membro_id, obra_id, ...restante } = formData;
+    const payload: NewLancamento = {
+      ...restante,
+      obra_id: obra_id ? obra_id : null,
+      membro_id:
+        formData.categoria === "hora_extra" && membro_id
+          ? membro_id
+          : null,
+    };
+
+    try {
+      setInternalSubmitting(true);
+      if (lancamento?.id) {
+        await onSave({ id: lancamento.id, ...payload });
+      } else {
+        await onSave(payload);
+      }
+    } finally {
+      setInternalSubmitting(false);
     }
-    onOpenChange(false);
   };
 
   return (
@@ -184,6 +232,43 @@ export function LancamentoDialog({
             </div>
           </div>
 
+          {formData.categoria === "hora_extra" && (
+            <div className="space-y-2">
+              <Label htmlFor="membro_id">Colaborador responsável</Label>
+              <Select
+                value={(formData.membro_id as string) ?? ""}
+                onValueChange={(valor: string) => handleChange("membro_id", valor)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o colaborador" />
+                </SelectTrigger>
+                <SelectContent>
+                  {membros.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      Cadastre colaboradores em Equipes
+                    </SelectItem>
+                  ) : (
+                    membros.map((membro) => (
+                      <SelectItem key={membro.id} value={membro.id}>
+                        {membro.nome}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {membros.length === 0 && (
+                <p className="text-xs text-destructive">
+                  É necessário cadastrar colaboradores para lançar horas extras.
+                </p>
+              )}
+              {membros.length > 0 && !formData.membro_id && (
+                <p className="text-xs text-destructive">
+                  Selecione o colaborador responsável pela hora extra.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="descricao">Descrição</Label>
             <Input
@@ -229,7 +314,13 @@ export function LancamentoDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit">{lancamento ? "Salvar" : "Adicionar"}</Button>
+            <Button type="submit" disabled={submitting || !canSubmit}>
+              {submitting
+                ? "Processando..."
+                : lancamento
+                ? "Salvar"
+                : "Adicionar"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

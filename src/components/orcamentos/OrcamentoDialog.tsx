@@ -150,11 +150,13 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button>Novo Orçamento</Button>}
+        {trigger || <Button>{"Novo Or\u00e7amento"}</Button>}
       </DialogTrigger>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{orcamento ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
+          <DialogTitle>
+            {orcamento ? "Editar Or\u00e7amento" : "Novo Or\u00e7amento"}
+          </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit}>
@@ -162,7 +164,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
             <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="geral">Geral</TabsTrigger>
               <TabsTrigger value="insumos">Insumos</TabsTrigger>
-              <TabsTrigger value="maoObra">Mão de Obra</TabsTrigger>
+              <TabsTrigger value="maoObra">{"M\u00e3o de Obra"}</TabsTrigger>
               <TabsTrigger value="transporte">Transporte</TabsTrigger>
               <TabsTrigger value="extras">Extras</TabsTrigger>
               <TabsTrigger value="resumo">Resumo</TabsTrigger>
@@ -195,7 +197,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="area">Área (m²)</Label>
+                  <Label htmlFor="area">{"\u00c1rea (m\u00b2)"}</Label>
                   <Input
                     id="area"
                     type="number"
@@ -205,7 +207,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                   />
                 </div>
                 <div>
-                  <Label htmlFor="custoPorM2">Custo por m²</Label>
+                  <Label htmlFor="custoPorM2">{"Custo por m\u00b2"}</Label>
                   <Input
                     id="custoPorM2"
                     type="number"
@@ -215,7 +217,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                   />
                 </div>
                 <div>
-                  <Label htmlFor="localizacao">Localização</Label>
+                  <Label htmlFor="localizacao">{"Localiza\u00e7\u00e3o"}</Label>
                   <Input
                     id="localizacao"
                     value={formData.localizacao}
@@ -224,7 +226,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                   />
                 </div>
                 <div>
-                  <Label htmlFor="responsavelTecnico">Responsável Técnico</Label>
+                  <Label htmlFor="responsavelTecnico">{"Respons\u00e1vel T\u00e9cnico"}</Label>
                   <Input
                     id="responsavelTecnico"
                     value={formData.responsavelTecnico}
@@ -241,12 +243,12 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                     <SelectContent>
                       <SelectItem value="rascunho">Rascunho</SelectItem>
                       <SelectItem value="aprovado">Aprovado</SelectItem>
-                      <SelectItem value="revisao">Em Revisão</SelectItem>
+                      <SelectItem value="revisao">{"Em Revis\u00e3o"}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="dataEmissao">Data de Emissão</Label>
+                  <Label htmlFor="dataEmissao">{"Data de Emiss\u00e3o"}</Label>
                   <Input
                     id="dataEmissao"
                     type="date"
@@ -270,7 +272,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                 {formData.insumos.map((insumo) => (
                   <div key={insumo.id} className="grid grid-cols-6 gap-2 p-3 border rounded-lg">
                     <Input
-                      placeholder="Descrição"
+                      placeholder="Descri\u00e7\u00e3o"
                       value={insumo.descricao}
                       onChange={(e) => updateInsumo(insumo.id, 'descricao', e.target.value)}
                     />
@@ -306,17 +308,17 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
 
             <TabsContent value="maoObra" className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Mão de Obra</h3>
+                <h3 className="text-lg font-semibold">{"M\u00e3o de Obra"}</h3>
                 <Button type="button" onClick={addMaoDeObra} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Função
+                  {"Adicionar Fun\u00e7\u00e3o"}
                 </Button>
               </div>
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {formData.maoDeObra.map((mao) => (
                   <div key={mao.id} className="grid grid-cols-5 gap-2 p-3 border rounded-lg">
                     <Input
-                      placeholder="Função"
+                      placeholder="Fun\u00e7\u00e3o"
                       value={mao.funcao}
                       onChange={(e) => updateMaoDeObra(mao.id, 'funcao', e.target.value)}
                     />
@@ -370,7 +372,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
               <h3 className="text-lg font-semibold">Transporte</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="distancia">Distância (km)</Label>
+                  <Label htmlFor="distancia">{"Dist\u00e2ncia (km)"}</Label>
                   <Input
                     id="distancia"
                     type="number"
@@ -394,7 +396,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                   />
                 </div>
                 <div>
-                  <Label htmlFor="precoGasolina">Preço Gasolina (R$/l)</Label>
+                  <Label htmlFor="precoGasolina">{"Pre\u00e7o Gasolina (R$/l)"}</Label>
                   <Input
                     id="precoGasolina"
                     type="number"
@@ -418,7 +420,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                   />
                 </div>
                 <div>
-                  <Label htmlFor="duracaoSemanas">Duração (semanas)</Label>
+                  <Label htmlFor="duracaoSemanas">{"Dura\u00e7\u00e3o (semanas)"}</Label>
                   <Input
                     id="duracaoSemanas"
                     type="number"
@@ -430,7 +432,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                   />
                 </div>
                 <div>
-                  <Label htmlFor="pedagios">Pedágios (R$)</Label>
+                  <Label htmlFor="pedagios">{"Ped\u00e1gios (R$)"}</Label>
                   <Input
                     id="pedagios"
                     type="number"
@@ -467,7 +469,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
                       onChange={(e) => updateDespesa(despesa.id, 'valor', parseFloat(e.target.value))}
                     />
                     <Input
-                      placeholder="Observações"
+                      placeholder="Observa\u00e7\u00f5es"
                       value={despesa.observacoes || ''}
                       onChange={(e) => updateDespesa(despesa.id, 'observacoes', e.target.value)}
                     />
@@ -479,7 +481,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
               </div>
               <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
                 <div>
-                  <Label htmlFor="contingencia">Contingência (%)</Label>
+                  <Label htmlFor="contingencia">{"Conting\u00eancia (%)"}</Label>
                   <Input
                     id="contingencia"
                     type="number"
@@ -511,18 +513,18 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
             <TabsContent value="resumo" className="space-y-4">
               <h3 className="text-lg font-semibold">Resumo</h3>
               <div>
-                <Label htmlFor="observacoesTecnicas">Observações Técnicas</Label>
+                <Label htmlFor="observacoesTecnicas">{"Observa\u00e7\u00f5es T\u00e9cnicas"}</Label>
                 <Textarea
                   id="observacoesTecnicas"
                   rows={4}
                   value={formData.observacoesTecnicas}
                   onChange={(e) => setFormData({ ...formData, observacoesTecnicas: e.target.value })}
-                  placeholder="Informações adicionais sobre o orçamento..."
+                  placeholder="Informa\u00e7\u00f5es adicionais sobre o or\u00e7amento..."
                 />
               </div>
               <p className="text-sm text-muted-foreground">
-                O orçamento será calculado automaticamente com base nos dados inseridos. 
-                Você poderá visualizar os totais e exportar em PDF após salvar.
+                {"O or\u00e7amento ser\u00e1 calculado automaticamente com base nos dados inseridos. "}
+                {"Voc\u00ea poder\u00e1 visualizar os totais e exportar em PDF ap\u00f3s salvar."}
               </p>
             </TabsContent>
           </Tabs>
@@ -531,7 +533,7 @@ export function OrcamentoDialog({ orcamento, onSave, trigger, custoPorM2Padrao }
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit">Salvar Orçamento</Button>
+            <Button type="submit">{"Salvar Or\u00e7amento"}</Button>
           </div>
         </form>
       </DialogContent>

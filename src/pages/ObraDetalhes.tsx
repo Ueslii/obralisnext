@@ -14,8 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
 import { useObras } from "@/hooks/useObras";
-import { useObraDetalhes } from "@/hooks/useObraDetalhes";
+import { useObraDetalhes, ObraInsumo } from "@/hooks/useObraDetalhes";
 import { useFinanceiro } from "@/hooks/useFinanceiro";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -27,30 +28,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 // Adicionado "export default" aqui
 export default function ObraDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   // Corrigindo a chamada do hook para usar a nova lógica com Supabase
-  const { obras, isLoading: isLoadingObras } = useObras();
+  const {
+    obras,
+    isLoading: isLoadingObras,
+    updateObra,
+    updateObraPending,
+  } = useObras();
 
   // Lógica para encontrar a obra específica após o carregamento
   const obra = !isLoadingObras ? obras.find((o) => o.id === id) : undefined;
 
   const {
     comentarios,
-    insumos,
     imprevistos,
+    etapas,
+    insumosSemEtapa,
     addComentario,
     addInsumo,
     updateInsumo,
     addImprevisto,
     getTotalImprevistos,
+    isLoading: isLoadingDetalhes,
   } = useObraDetalhes(id || "");
   const { lancamentos } = useFinanceiro();
 
+  const [progressoSelecionado, setProgressoSelecionado] = useState<number>(0);
   const [novoComentario, setNovoComentario] = useState("");
   const [novoInsumo, setNovoInsumo] = useState({
     nome: "",
@@ -58,6 +68,8 @@ export default function ObraDetalhes() {
     unidade: "",
     fornecedor: "",
     dataEntrega: "",
+    etapaId: "",
+    valorUnitario: 0,
   });
   const [novoImprevisto, setNovoImprevisto] = useState({
     descricao: "",
@@ -65,8 +77,32 @@ export default function ObraDetalhes() {
     categoria: "material",
   });
 
-  if (isLoadingObras) {
-    return <div>Carregando...</div>; // Adiciona um estado de carregamento
+  useEffect(() => {
+    if (obra) {
+      setProgressoSelecionado(Number(obra.progresso ?? 0));
+    }
+  }, [obra?.id, obra?.progresso]);
+
+  const progressoAtual = Number(obra?.progresso ?? 0);
+  const progressoAlterado = progressoSelecionado !== progressoAtual;
+
+  const handleAtualizarProgresso = async () => {
+    if (!obra) return;
+
+    try {
+      await updateObra({
+        id: obra.id,
+        progresso: progressoSelecionado,
+      });
+      toast.success("Progresso atualizado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar progresso da obra:", error);
+      toast.error("Não foi possível atualizar o progresso da obra.");
+    }
+  };
+
+  if (isLoadingObras || isLoadingDetalhes) {
+    return <div>Carregando...</div>;
   }
 
   if (!obra) {
@@ -87,11 +123,10 @@ export default function ObraDetalhes() {
     .reduce((sum, l) => sum + l.valor, 0);
   const saldoObra = totalReceitas - totalDespesas - getTotalImprevistos();
 
-  const handleAddComentario = () => {
+    const handleAddComentario = async () => {
     if (novoComentario.trim()) {
-      addComentario({
+      await addComentario({
         obraId: id || "",
-        autor: "Usuário Atual", // Você vai querer substituir isso pelo usuário logado
         conteudo: novoComentario,
         tipo: "comentario",
       });
@@ -99,12 +134,18 @@ export default function ObraDetalhes() {
     }
   };
 
-  const handleAddInsumo = () => {
+  const handleAddInsumo = async () => {
     if (novoInsumo.nome && novoInsumo.quantidade > 0) {
-      addInsumo({
+      await addInsumo({
         obraId: id || "",
-        ...novoInsumo,
+        nome: novoInsumo.nome,
+        quantidade: novoInsumo.quantidade,
+        unidade: novoInsumo.unidade,
+        fornecedor: novoInsumo.fornecedor || undefined,
+        dataEntrega: novoInsumo.dataEntrega || undefined,
         quantidadeUsada: 0,
+        etapaId: novoInsumo.etapaId || undefined,
+        valorUnitario: novoInsumo.valorUnitario || undefined,
       });
       setNovoInsumo({
         nome: "",
@@ -112,18 +153,73 @@ export default function ObraDetalhes() {
         unidade: "",
         fornecedor: "",
         dataEntrega: "",
+        etapaId: "",
+        valorUnitario: 0,
       });
     }
   };
 
-  const handleAddImprevisto = () => {
+  const handleAddImprevisto = async () => {
     if (novoImprevisto.descricao && novoImprevisto.valor > 0) {
-      addImprevisto({
+      await addImprevisto({
         obraId: id || "",
         ...novoImprevisto,
       });
       setNovoImprevisto({ descricao: "", valor: 0, categoria: "material" });
     }
+  };
+
+  const renderInsumoCard = (insumo: ObraInsumo) => {
+    const percentual =
+      insumo.quantidade > 0
+        ? Math.min(
+            100,
+            Math.max(0, (insumo.quantidadeUsada / insumo.quantidade) * 100)
+          )
+        : 0;
+    const restante = Math.max(0, insumo.quantidade - insumo.quantidadeUsada);
+
+    return (
+      <div key={insumo.id} className="p-4 border rounded-lg space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">{insumo.nome}</span>
+          {insumo.fornecedor ? (
+            <Badge variant="outline">{insumo.fornecedor}</Badge>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <span>
+            Total: {insumo.quantidade} {insumo.unidade}
+          </span>
+          <span>
+            Usado: {insumo.quantidadeUsada} {insumo.unidade}
+          </span>
+          <span>
+            Restante: {restante} {insumo.unidade}
+          </span>
+          {insumo.valorUnitario ? (
+            <span>
+              Valor unitario: R${" "}
+              {Number(insumo.valorUnitario).toLocaleString("pt-BR")}
+            </span>
+          ) : null}
+        </div>
+        <Progress value={percentual} className="h-2" />
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            placeholder="Atualizar quantidade usada"
+            className="flex-1"
+            onBlur={(event) => {
+              const valor = Number(event.target.value);
+              if (!Number.isNaN(valor) && valor >= 0) {
+                updateInsumo(insumo.id, valor);
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -160,11 +256,45 @@ export default function ObraDetalhes() {
               Progresso
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold mb-2">
-              {obra.progresso || 0}%
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Progresso planejado</p>
+                <div className="text-3xl font-bold">
+                  {progressoSelecionado}%
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  void handleAtualizarProgresso();
+                }}
+                disabled={!progressoAlterado || updateObraPending}
+              >
+                {updateObraPending ? "Salvando..." : "Salvar"}
+              </Button>
             </div>
-            <Progress value={obra.progresso || 0} className="h-2" />
+            <Slider
+              value={[progressoSelecionado]}
+              max={100}
+              step={1}
+              onValueChange={([valor]) => {
+                if (typeof valor === "number") {
+                  setProgressoSelecionado(
+                    Math.min(100, Math.max(0, Math.round(valor)))
+                  );
+                }
+              }}
+            />
+            <div className="space-y-2">
+              <Progress value={progressoSelecionado} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                Último registro salvo:{" "}
+                <span className="font-medium text-foreground">
+                  {progressoAtual}%
+                </span>
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -280,31 +410,51 @@ export default function ObraDetalhes() {
           </div>
         </TabsContent>
 
-        <TabsContent value="insumos" className="space-y-4">
+                <TabsContent value="insumos" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Registrar Insumo</CardTitle>
+              <CardTitle>Registrar insumo</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Nome do Material</Label>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Nome do material</Label>
                   <Input
                     value={novoInsumo.nome}
-                    onChange={(e) =>
-                      setNovoInsumo({ ...novoInsumo, nome: e.target.value })
+                    onChange={(event) =>
+                      setNovoInsumo({ ...novoInsumo, nome: event.target.value })
                     }
-                    placeholder="Ex: Cimento, Areia, Tijolo..."
+                    placeholder="Ex: cimento, areia, tijolo..."
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Etapa</Label>
+                  <Select
+                    value={novoInsumo.etapaId}
+                    onValueChange={(valor) =>
+                      setNovoInsumo({ ...novoInsumo, etapaId: valor })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sem etapa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {etapas.map((etapa) => (
+                        <SelectItem key={etapa.id} value={etapa.id}>
+                          {etapa.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Fornecedor</Label>
                   <Input
                     value={novoInsumo.fornecedor}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setNovoInsumo({
                         ...novoInsumo,
-                        fornecedor: e.target.value,
+                        fornecedor: event.target.value,
                       })
                     }
                   />
@@ -314,10 +464,10 @@ export default function ObraDetalhes() {
                   <Input
                     type="number"
                     value={novoInsumo.quantidade}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setNovoInsumo({
                         ...novoInsumo,
-                        quantidade: Number(e.target.value),
+                        quantidade: Number(event.target.value),
                       })
                     }
                   />
@@ -326,72 +476,95 @@ export default function ObraDetalhes() {
                   <Label>Unidade</Label>
                   <Input
                     value={novoInsumo.unidade}
-                    onChange={(e) =>
-                      setNovoInsumo({ ...novoInsumo, unidade: e.target.value })
+                    onChange={(event) =>
+                      setNovoInsumo({
+                        ...novoInsumo,
+                        unidade: event.target.value,
+                      })
                     }
-                    placeholder="Ex: kg, m³, unidade..."
+                    placeholder="Ex: kg, m3, unidade"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Data de Entrega</Label>
+                  <Label>Valor unitario (R$)</Label>
+                  <Input
+                    type="number"
+                    value={novoInsumo.valorUnitario}
+                    onChange={(event) =>
+                      setNovoInsumo({
+                        ...novoInsumo,
+                        valorUnitario: Number(event.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data de entrega</Label>
                   <Input
                     type="date"
                     value={novoInsumo.dataEntrega}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setNovoInsumo({
                         ...novoInsumo,
-                        dataEntrega: e.target.value,
+                        dataEntrega: event.target.value,
                       })
                     }
                   />
                 </div>
               </div>
-              <Button onClick={handleAddInsumo}>Adicionar Insumo</Button>
+              <Button onClick={handleAddInsumo}>Adicionar insumo</Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Insumos Cadastrados</CardTitle>
+              <CardTitle>Insumos por etapa</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {insumos.map((ins) => (
-                  <div key={ins.id} className="p-4 border rounded-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">{ins.nome}</span>
-                      <Badge variant="outline">{ins.fornecedor}</Badge>
+            <CardContent className="space-y-6">
+              {etapas.length === 0 && insumosSemEtapa.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum insumo registrado para esta obra.
+                </p>
+              ) : (
+                <>
+                  {etapas.map((etapa) => (
+                    <div key={etapa.id} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-base font-semibold">{etapa.nome}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Custo previsto: R$ {etapa.custoPrevisto.toLocaleString("pt-BR")}
+                          </p>
+                        </div>
+                      </div>
+                      {etapa.insumos.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Nenhum insumo vinculado a esta etapa.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {etapa.insumos.map((insumo) => renderInsumoCard(insumo))}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>
-                        Total: {ins.quantidade} {ins.unidade}
-                      </span>
-                      <span>
-                        Usado: {ins.quantidadeUsada} {ins.unidade}
-                      </span>
-                      <span>
-                        Restante: {ins.quantidade - ins.quantidadeUsada}{" "}
-                        {ins.unidade}
-                      </span>
+                  ))}
+                  {insumosSemEtapa.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-base font-semibold">Insumos sem etapa</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Materiais ainda nao associados a uma etapa especifica.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {insumosSemEtapa.map((insumo) => renderInsumoCard(insumo))}
+                      </div>
                     </div>
-                    <Progress
-                      value={(ins.quantidadeUsada / ins.quantidade) * 100}
-                      className="h-2"
-                    />
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Atualizar quantidade usada"
-                        className="flex-1"
-                        onBlur={(e) => {
-                          const val = Number(e.target.value);
-                          if (val > 0) updateInsumo(ins.id, val);
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -576,3 +749,6 @@ export default function ObraDetalhes() {
     </div>
   );
 }
+
+
+

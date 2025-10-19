@@ -1,36 +1,53 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Database } from "@/integrations/supabase/types";
 import { useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { endOfDay, startOfDay } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+import { toast } from "sonner";
 
-export type Lancamento = Database["public"]["Tables"]["lancamentos"]["Row"] & {
-  obras: { nome: string } | null;
-};
+export type Lancamento =
+  Database["public"]["Tables"]["lancamentos"]["Row"] & {
+    obras: { nome: string } | null;
+    membros: { id: string; nome: string; funcao: string | null } | null;
+  };
+
 export type NewLancamento =
   Database["public"]["Tables"]["lancamentos"]["Insert"];
 
-export const useFinanceiro = (dateRange?: { from?: Date; to?: Date }) => {
+type DateRangeFilter = { from?: Date; to?: Date };
+
+export const useFinanceiro = (dateRange?: DateRangeFilter) => {
   const queryClient = useQueryClient();
 
+  const normalizedRange = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) {
+      return { from: null as string | null, to: null as string | null };
+    }
+
+    return {
+      from: startOfDay(dateRange.from).toISOString(),
+      to: endOfDay(dateRange.to).toISOString(),
+    };
+  }, [dateRange]);
+
   const { data: lancamentos = [], isLoading } = useQuery<Lancamento[]>({
-    queryKey: ["lancamentos", dateRange], // <- inclui o filtro na key
+    queryKey: ["lancamentos", normalizedRange.from, normalizedRange.to],
     queryFn: async () => {
       let query = supabase
         .from("lancamentos")
         .select(
           `
           *,
-          obras (nome)
+          obras (nome),
+          membros (id, nome, funcao)
         `
         )
         .order("data", { ascending: false });
 
-      // aplica o filtro de datas se houver
-      if (dateRange?.from && dateRange?.to) {
+      if (normalizedRange.from && normalizedRange.to) {
         query = query
-          .gte("data", dateRange.from.toISOString())
-          .lte("data", dateRange.to.toISOString());
+          .gte("data", normalizedRange.from)
+          .lte("data", normalizedRange.to);
       }
 
       const { data, error } = await query;
@@ -38,15 +55,15 @@ export const useFinanceiro = (dateRange?: { from?: Date; to?: Date }) => {
       return data as Lancamento[];
     },
   });
-  // Funções de cálculo restauradas usando useMemo para eficiência
+
   const resumoFinanceiro = useMemo(() => {
     const totalDespesas = lancamentos
-      .filter((l) => l.tipo === "despesa")
-      .reduce((acc, l) => acc + l.valor, 0);
+      .filter((lancamento) => lancamento.tipo === "despesa")
+      .reduce((acc, lancamento) => acc + lancamento.valor, 0);
 
     const totalReceitas = lancamentos
-      .filter((l) => l.tipo === "receita")
-      .reduce((acc, l) => acc + l.valor, 0);
+      .filter((lancamento) => lancamento.tipo === "receita")
+      .reduce((acc, lancamento) => acc + lancamento.valor, 0);
 
     const saldo = totalReceitas - totalDespesas;
 
@@ -54,17 +71,25 @@ export const useFinanceiro = (dateRange?: { from?: Date; to?: Date }) => {
   }, [lancamentos]);
 
   const despesasPorCategoria = useMemo(() => {
-    const porCategoria: { [key: string]: number } = {};
+    const porCategoria = new Map<string, number>();
+
     lancamentos
-      .filter((l) => l.tipo === "despesa")
-      .forEach((l) => {
-        const categoria = l.categoria ?? "outros";
-        porCategoria[categoria] = (porCategoria[categoria] || 0) + l.valor;
+      .filter((lancamento) => lancamento.tipo === "despesa")
+      .forEach((lancamento) => {
+        const categoria = lancamento.categoria ?? "Outros";
+        const chave =
+          categoria.charAt(0).toUpperCase() +
+          categoria.slice(1).toLowerCase();
+
+        porCategoria.set(
+          chave,
+          (porCategoria.get(chave) ?? 0) + lancamento.valor
+        );
       });
 
-    return Object.entries(porCategoria).map(([name, despesas]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      Despesas: despesas,
+    return Array.from(porCategoria.entries()).map(([category, value]) => ({
+      category,
+      value,
     }));
   }, [lancamentos]);
 
@@ -73,11 +98,17 @@ export const useFinanceiro = (dateRange?: { from?: Date; to?: Date }) => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!user) throw new Error("Usuario nao autenticado");
 
       const { data, error } = await supabase
         .from("lancamentos")
-        .insert([{ ...lancamento, user_id: user.id }])
+        .insert([
+          {
+            ...lancamento,
+            membro_id: lancamento.membro_id ?? null,
+            user_id: user.id,
+          },
+        ])
         .select()
         .single();
 
@@ -86,21 +117,27 @@ export const useFinanceiro = (dateRange?: { from?: Date; to?: Date }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
-      toast.success("Lançamento adicionado com sucesso!");
+      toast.success("Lancamento adicionado com sucesso!");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Erro ao adicionar lançamento");
+      toast.error(error.message || "Erro ao adicionar lancamento");
     },
   });
 
   const updateLancamento = useMutation({
     mutationFn: async ({
       id,
+      membro_id,
       ...dados
     }: Partial<NewLancamento> & { id: string }) => {
+      const payload: Record<string, any> = { ...dados };
+      if (membro_id !== undefined) {
+        payload.membro_id = membro_id ?? null;
+      }
+
       const { data, error } = await supabase
         .from("lancamentos")
-        .update(dados)
+        .update(payload)
         .eq("id", id)
         .select()
         .single();
@@ -110,10 +147,10 @@ export const useFinanceiro = (dateRange?: { from?: Date; to?: Date }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
-      toast.success("Lançamento atualizado com sucesso!");
+      toast.success("Lancamento atualizado com sucesso!");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Erro ao atualizar lançamento");
+      toast.error(error.message || "Erro ao atualizar lancamento");
     },
   });
 
@@ -127,20 +164,23 @@ export const useFinanceiro = (dateRange?: { from?: Date; to?: Date }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
-      toast.success("Lançamento deletado com sucesso!");
+      toast.success("Lancamento deletado com sucesso!");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Erro ao deletar lançamento");
+      toast.error(error.message || "Erro ao deletar lancamento");
     },
   });
 
   return {
     lancamentos,
     isLoading,
-    resumoFinanceiro, // Retornando o resumo
-    despesasPorCategoria, // Retornando os dados para o gráfico
-    addLancamento: addLancamento.mutate,
-    updateLancamento: updateLancamento.mutate,
-    deleteLancamento: deleteLancamento.mutate,
+    resumoFinanceiro,
+    despesasPorCategoria,
+    addLancamento: addLancamento.mutateAsync,
+    addLancamentoPending: addLancamento.isPending,
+    updateLancamento: updateLancamento.mutateAsync,
+    updateLancamentoPending: updateLancamento.isPending,
+    deleteLancamento: deleteLancamento.mutateAsync,
+    deleteLancamentoPending: deleteLancamento.isPending,
   };
 };

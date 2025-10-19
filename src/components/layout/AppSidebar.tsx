@@ -1,5 +1,17 @@
-import { Building2, LayoutDashboard, Calculator, Users, FileBarChart, Settings, HardHat, DollarSign, AlertTriangle, Truck } from "lucide-react";
+import {
+  Building2,
+  LayoutDashboard,
+  Calculator,
+  Users,
+  FileBarChart,
+  Settings,
+  HardHat,
+  DollarSign,
+  AlertTriangle,
+  Truck,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
+import MIniLogo from "@/assets/MIniLOgo.svg";
 import {
   Sidebar,
   SidebarContent,
@@ -13,7 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Obras", url: "/obras", icon: Building2 },
   { title: "Financeiro", url: "/financeiro", icon: DollarSign },
   { title: "Orçamentos", url: "/orcamentos", icon: Calculator },
@@ -34,12 +46,18 @@ export function AppSidebar() {
         <div className="px-6 py-5 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-              <HardHat className="h-6 w-6 text-primary-foreground" />
+              <img
+                src={MIniLogo}
+                alt="Obralis"
+                className="h-15 w-22 object-contain"
+              />
             </div>
             {!isCollapsed && (
               <div className="flex flex-col">
                 <h1 className="text-lg font-bold text-foreground">Obralis</h1>
-                <p className="text-xs text-muted-foreground">Gestão Inteligente</p>
+                <p className="text-xs text-muted-foreground">
+                  Gestão Inteligente
+                </p>
               </div>
             )}
           </div>
@@ -54,7 +72,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/"}
+                      end={item.url === "/dashboard"}
                       className={({ isActive }) =>
                         isActive
                           ? "bg-sidebar-accent text-sidebar-primary"

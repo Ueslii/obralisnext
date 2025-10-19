@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { Obra } from "@/hooks/useObras";
 import { Lancamento } from "@/hooks/useFinanceiro";
 import { Membro } from "@/hooks/useEquipes";
@@ -25,7 +25,7 @@ export const generatePDF = async (
     .reduce((acc, l) => acc + l.valor, 0);
   const saldo = totalReceitas - totalDespesas;
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: 35,
     head: [["Resumo Financeiro", "Valor (R$)"]],
     body: [
@@ -43,7 +43,7 @@ export const generatePDF = async (
   ).length;
   const obrasConcluidas = obras.filter((o) => o.status === "concluida").length;
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: (doc as any).lastAutoTable.finalY + 10,
     head: [["Resumo de Obras", "Quantidade"]],
     body: [
@@ -56,7 +56,7 @@ export const generatePDF = async (
   });
 
   // Tabela de Obras
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: (doc as any).lastAutoTable.finalY + 10,
     head: [["Obra", "Status", "Progresso (%)", "Custo Previsto", "Custo Real"]],
     body: obras.map((o) => [

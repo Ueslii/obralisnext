@@ -1,83 +1,102 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { CalendarDateRangePicker } from "@/components/dashboard/DateRangerPicker";
-import { Overview } from "@/components/dashboard/Overview";
-import { useObras } from "@/hooks/useObras";
-import { useFinanceiro } from "@/hooks/useFinanceiro";
-import StatCard from "@/components/dashboard/StatCard";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { DateRange } from "react-day-picker";
 import {
   AlertTriangle,
   Building,
   DollarSign,
+  TrendingDown,
   TrendingUp,
   Users,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { CalendarDateRangePicker } from "@/components/dashboard/DateRangerPicker";
+import StatCard from "@/components/dashboard/StatCard";
+import { Overview } from "@/components/dashboard/Overview";
+import { useObras } from "@/hooks/useObras";
+import { useFinanceiro } from "@/hooks/useFinanceiro";
 import { useEquipes } from "@/hooks/useEquipes";
-import { Link } from "react-router-dom";
-import { useState } from "react";
-import { DateRange } from "react-day-picker";
-import { addDays } from "date-fns";
 
 export default function Dashboard() {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date(),
+  });
+
   const { obras, isLoading: isLoadingObras } = useObras();
   const {
     resumoFinanceiro,
     despesasPorCategoria,
     isLoading: isLoadingFinanceiro,
-  } = useFinanceiro();
+  } = useFinanceiro(dateRange);
   const { membros, isLoading: isLoadingEquipes } = useEquipes();
 
-  const [date, setDate] = useState<DateRange>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date(),
-  });
+  const totalReceitas = resumoFinanceiro?.totalReceitas ?? 0;
+  const totalDespesas = resumoFinanceiro?.totalDespesas ?? 0;
+  const saldo = resumoFinanceiro?.saldo ?? 0;
+
+  const obrasEmAndamento = useMemo(
+    () => obras.filter((obra) => obra.status === "em_andamento"),
+    [obras]
+  );
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
-          <CalendarDateRangePicker date={date} setDate={setDate} />
-          <Button>Download</Button>
+          <CalendarDateRangePicker date={dateRange} setDate={setDateRange} />
+          <Button variant="outline">Download</Button>
         </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <StatCard
               title="Total de Receitas"
-              value={`R$ ${resumoFinanceiro.totalReceitas.toLocaleString(
-                "pt-BR"
-              )}`}
-              description="Total de receitas de todas as obras"
+              value={`+ R$ ${totalReceitas.toLocaleString("pt-BR")}`}
+              description="Receitas consolidadas no periodo"
               icon={DollarSign}
               isLoading={isLoadingFinanceiro}
+              valueClassName="text-emerald-600"
             />
             <StatCard
               title="Total de Despesas"
-              value={`R$ ${resumoFinanceiro.totalDespesas.toLocaleString(
-                "pt-BR"
-              )}`}
-              description="Total de despesas de todas as obras"
+              value={`- R$ ${totalDespesas.toLocaleString("pt-BR")}`}
+              description="Gastos registrados no periodo"
+              icon={TrendingDown}
+              isLoading={isLoadingFinanceiro}
+              valueClassName="text-red-500"
+            />
+            <StatCard
+              title="Saldo Total"
+              value={`${saldo >= 0 ? "+ " : "- "}R$ ${Math.abs(
+                saldo
+              ).toLocaleString("pt-BR")}`}
+              description="Receitas menos despesas"
               icon={TrendingUp}
               isLoading={isLoadingFinanceiro}
+              valueClassName={
+                saldo >= 0 ? "text-emerald-600" : "text-red-500"
+              }
             />
             <StatCard
               title="Obras Ativas"
-              value={`+${
-                obras.filter((o) => o.status === "em_andamento").length
-              }`}
-              description="Obras em andamento no momento"
+              value={`+${obrasEmAndamento.length}`}
+              description="Projetos atualmente em andamento"
               icon={Building}
               isLoading={isLoadingObras}
             />
             <StatCard
               title="Membros Ativos"
-              value={`+${membros.filter((m) => m.status === "ativo").length}`}
-              description="Membros da equipe trabalhando"
+              value={`+${
+                membros.filter((membro) => membro.status === "ativo").length
+              }`}
+              description="Colaboradores disponiveis"
               icon={Users}
               isLoading={isLoadingEquipes}
             />
@@ -124,7 +143,7 @@ export default function Dashboard() {
             >
               <Link to="/orcamentos">
                 <TrendingUp className="h-6 w-6 text-primary" />
-                <span>Orçamentos</span>
+                <span>Orcamentos</span>
               </Link>
             </Button>
           </div>
@@ -132,14 +151,15 @@ export default function Dashboard() {
           <div className="grid gap-4">
             <Card className="col-span-4">
               <CardHeader>
-                <CardTitle>Visão Geral de Custos</CardTitle>
+                <CardTitle>Visao Geral de Custos</CardTitle>
               </CardHeader>
               <CardContent>
                 <Overview
-                  date={date}
-                  setDate={setDate}
+                  dateRange={dateRange}
                   despesasPorCategoria={despesasPorCategoria}
                   isLoading={isLoadingFinanceiro}
+                  obras={obrasEmAndamento}
+                  isLoadingObras={isLoadingObras}
                 />
               </CardContent>
             </Card>
