@@ -4,7 +4,6 @@ import { Obra } from "@/hooks/useObras";
 import { Lancamento } from "@/hooks/useFinanceiro";
 import { Membro } from "@/hooks/useEquipes";
 
-// O nome da função foi corrigido para 'generatePDF'
 export const generatePDF = async (
   obras: Obra[],
   lancamentos: Lancamento[],
@@ -71,3 +70,4 @@ export const generatePDF = async (
 
   doc.save(`relatorio-geral-${new Date().toISOString().split("T")[0]}.pdf`);
 };
+

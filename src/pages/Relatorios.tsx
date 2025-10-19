@@ -4,7 +4,7 @@ import { Download } from "lucide-react";
 import { useObras } from "@/hooks/useObras";
 import { useFinanceiro } from "@/hooks/useFinanceiro";
 import { useEquipes } from "@/hooks/useEquipes";
-// A importação foi corrigida para usar 'generatePDF'
+
 export default function Relatorios() {
   const { obras, isLoading: isLoadingObras } = useObras();
   const {
@@ -115,3 +115,4 @@ export default function Relatorios() {
     </div>
   );
 }
+

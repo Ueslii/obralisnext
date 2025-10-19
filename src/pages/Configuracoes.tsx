@@ -7,15 +7,14 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/useTheme";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/components/ui/sonner";
 
 export default function Configuracoes() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const { themeMode, accentColor, toggleTheme, changeAccent } = useTheme();
-  
+
   const [notificacoes, setNotificacoes] = useState({
     emailObras: true,
     alertasOrcamento: true,
@@ -24,23 +23,20 @@ export default function Configuracoes() {
   });
 
   const handleSaveProfile = () => {
-    toast({ 
-      title: "Perfil atualizado com sucesso!",
-      description: "Suas informações pessoais foram atualizadas."
+    toast("Perfil atualizado com sucesso!", {
+      description: "Suas informações pessoais foram atualizadas.",
     });
   };
 
   const handleSaveCompany = () => {
-    toast({ 
-      title: "Dados da empresa atualizados!",
-      description: "As informações da empresa foram salvas."
+    toast("Dados da empresa atualizados!", {
+      description: "As informações da empresa foram salvas.",
     });
   };
 
   const handleUpdatePassword = () => {
-    toast({ 
-      title: "Senha atualizada com sucesso!",
-      description: "Sua senha foi alterada com segurança."
+    toast("Senha atualizada com sucesso!", {
+      description: "Sua senha foi alterada com segurança.",
     });
   };
 
@@ -123,13 +119,13 @@ export default function Configuracoes() {
               <Bell className="h-5 w-5 text-primary" />
               Notificações
             </CardTitle>
-            <CardDescription>Gerencie suas preferências de notificação</CardDescription>
+            <CardDescription>Preferências de alertas e avisos</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">E-mail de obras</p>
-                <p className="text-sm text-muted-foreground">Receber atualizações sobre obras</p>
+                <p className="font-medium">Alertas de obras por e-mail</p>
+                <p className="text-sm text-muted-foreground">Receba atualizações sobre suas obras</p>
               </div>
               <Switch 
                 checked={notificacoes.emailObras}
@@ -140,7 +136,7 @@ export default function Configuracoes() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Alertas de orçamento</p>
-                <p className="text-sm text-muted-foreground">Notificações quando custos excedem limites</p>
+                <p className="text-sm text-muted-foreground">Quando houver estouro de budget</p>
               </div>
               <Switch 
                 checked={notificacoes.alertasOrcamento}
@@ -200,7 +196,7 @@ export default function Configuracoes() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="orange">🟠 Laranja Construtivo</SelectItem>
+                  <SelectItem value="orange">🍊 Laranja Construtivo</SelectItem>
                   <SelectItem value="blue">🔵 Azul Técnico</SelectItem>
                 </SelectContent>
               </Select>
@@ -219,10 +215,10 @@ export default function Configuracoes() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Button variant="outline" className="w-full justify-start">
-              <span className="mr-2">📱</span> Integrar WhatsApp Business
+              <span className="mr-2">💬</span> Integrar WhatsApp Business
             </Button>
             <Button variant="outline" className="w-full justify-start">
-              <span className="mr-2">📊</span> Conectar Google Sheets
+              <span className="mr-2">📄</span> Conectar Google Sheets
             </Button>
             <Button variant="outline" className="w-full justify-start">
               <span className="mr-2">☁️</span> Sincronizar Google Drive
@@ -259,3 +255,4 @@ export default function Configuracoes() {
     </div>
   );
 }
+

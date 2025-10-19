@@ -35,7 +35,6 @@ export const generateOrcamentoPdf = async (orcamento: Orcamento) => {
     headStyles: { fillColor: [249, 115, 22] },
   });
 
-  
   if (orcamento.etapas.length > 0) {
     autoTable(doc, {
       startY: nextTableStart(doc),

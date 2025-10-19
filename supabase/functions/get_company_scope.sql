@@ -37,4 +37,6 @@ begin
 end;
 $$;
 
-grant execute on function public.get_company_scope() to anon, authenticated;
+revoke all on function public.get_company_scope() from public;
+revoke execute on function public.get_company_scope() from anon;
+grant execute on function public.get_company_scope() to authenticated;

@@ -40,8 +40,9 @@ serve(async (request) => {
     return respond(500, { error: "Server not configured" });
   }
 
+  // If Authorization header is provided, validate it. Otherwise, allow internal calls without it.
   const authHeader = request.headers.get("authorization") ?? "";
-  if (!authHeader.endsWith(SUPABASE_SERVICE_ROLE_KEY)) {
+  if (authHeader && !authHeader.endsWith(SUPABASE_SERVICE_ROLE_KEY)) {
     return respond(403, { error: "Forbidden" });
   }
 
@@ -176,3 +177,4 @@ serve(async (request) => {
 
   return respond(200, { status: "Notifications sent" });
 });
+

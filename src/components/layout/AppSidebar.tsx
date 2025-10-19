@@ -11,7 +11,7 @@ import {
   Truck,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import MIniLogo from "@/assets/MIniLOgo.svg";
+import MiniLogo from "@/assets/MiniLOgo.svg";
 import {
   Sidebar,
   SidebarContent,
@@ -47,7 +47,7 @@ export function AppSidebar() {
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
               <img
-                src={MIniLogo}
+                src={MiniLogo}
                 alt="Obralis"
                 className="h-15 w-22 object-contain"
               />
