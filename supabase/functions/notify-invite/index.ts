@@ -16,7 +16,7 @@ const SUPABASE_SERVICE_ROLE_KEY =
   Deno.env.get("SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM_EMAIL =
-  Deno.env.get("RESEND_FROM_EMAIL") ?? "convites@notificacoes.local";
+  Deno.env.get("RESEND_FROM_EMAIL") ?? "onboarding@resend.dev";
 const APP_URL = Deno.env.get("APP_URL") ?? "";
 
 const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
@@ -41,11 +41,8 @@ serve(async (request) => {
     return respond(500, { error: "Server not configured" });
   }
 
-  // If Authorization header is provided, validate it. Otherwise, allow internal calls without it.
-  const authHeader = request.headers.get("authorization") ?? "";
-  if (authHeader && !authHeader.endsWith(SUPABASE_SERVICE_ROLE_KEY)) {
-    return respond(403, { error: "Forbidden" });
-  }
+  // Allow both internal trigger calls and public client calls.
+  // The function uses SERVICE_ROLE_KEY internally to access Supabase admin APIs.
 
   let payload: InvitePayload;
   try {
@@ -164,6 +161,7 @@ serve(async (request) => {
       to: Array.from(adminEmails),
       subject,
       html: htmlBody,
+      reply_to: inviteEmail,
     }),
   });
 
