@@ -33,6 +33,11 @@ export function AppHeader() {
             <Input
               placeholder="Buscar obras, orçamentos, equipes..."
               className="pl-10 bg-muted/50"
+              type="search"
+              name="global-search"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
             />
           </div>
         </div>
@@ -74,3 +79,4 @@ export function AppHeader() {
     </header>
   );
 }
+

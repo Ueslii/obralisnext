@@ -1,12 +1,15 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
+import { useTheme } from "@/hooks/useTheme";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  // Ensure user theme preferences (mode/accent) are applied globally
+  useTheme();
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">

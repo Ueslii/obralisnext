@@ -1,4 +1,4 @@
-﻿import { Settings, User, Building, Bell, Shield, Palette, Moon, Sun, Share2 } from "lucide-react";
+import { Settings, User, Building, Bell, Shield, Palette, Moon, Sun, Share2, MessageCircle, FileSpreadsheet, HardDrive } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -163,16 +163,17 @@ export default function Configuracoes() {
     }
   };
 
-  const handleSaveNotifications = async () => {
+  const autoSaveNotifications = async (next: typeof notificacoes) => {
+    setNotificacoes(next);
     try {
       const { error } = await supabase.auth.updateUser({
-        data: { prefs_notificacoes: notificacoes },
+        data: { prefs_notificacoes: next },
       });
       if (error) throw error;
-      toast.success("Preferências de notificação salvas");
+      toast.success("Preferências atualizadas");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "Não foi possível salvar as Preferências");
+      toast.error(e?.message ?? "Não foi possível salvar as preferências");
     }
   };
 
@@ -192,14 +193,14 @@ export default function Configuracoes() {
   };
 
   const handleUpdatePassword = async () => {
-    toast("Senha atualizada com sucesso!", { description: "Sua senha foi alterada com seguranÃ§a." });
+    toast("Senha atualizada com sucesso!", { description: "Sua senha foi alterada com segurança." });
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold mb-2">ConfiguraÃ§Ãµes</h1>
-        <p className="text-muted-foreground">Gerencie suas Preferências e dados da empresa</p>
+        <h1 className="text-3xl font-bold mb-2">Configurações</h1>
+        <p className="text-muted-foreground">Gerencie suas preferências e dados da empresa</p>
       </div>
 
       <Tabs defaultValue="perfil" className="grid gap-6">
@@ -207,9 +208,9 @@ export default function Configuracoes() {
           <TabsTrigger value="perfil">Perfil</TabsTrigger>
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
           <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
-          <TabsTrigger value="personalizacao">PersonalizaÃ§Ã£o</TabsTrigger>
-          <TabsTrigger value="integracoes">IntegraÃ§Ãµes</TabsTrigger>
-          <TabsTrigger value="seguranca">SeguranÃ§a</TabsTrigger>
+          <TabsTrigger value="personalizacao">Personalização</TabsTrigger>
+          <TabsTrigger value="integracoes">Integrações</TabsTrigger>
+          <TabsTrigger value="seguranca">Segurança</TabsTrigger>
           <TabsTrigger value="convites">Convites</TabsTrigger>
         </TabsList>
 
@@ -219,9 +220,9 @@ export default function Configuracoes() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              Perfil do UsuÃ¡rio
+              Perfil do Usuário
             </CardTitle>
-            <CardDescription>informações pessoais e de acesso</CardDescription>
+            <CardDescription>Informações pessoais e de acesso</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -242,7 +243,7 @@ export default function Configuracoes() {
                 <Input id="cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} />
               </div>
             </div>
-            <Button onClick={handleSaveProfile} className="gradient-primary" disabled={loading}>Salvar AlteraÃ§Ãµes</Button>
+            <Button onClick={handleSaveProfile} className="gradient-primary" disabled={loading}>Salvar Alterações</Button>
           </CardContent>
         </Card>
         </TabsContent>
@@ -255,7 +256,7 @@ export default function Configuracoes() {
               <Building className="h-5 w-5 text-primary" />
               Dados da Empresa
             </CardTitle>
-            <CardDescription>informações da construtora</CardDescription>
+            <CardDescription>Informações da construtora</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -268,7 +269,7 @@ export default function Configuracoes() {
                 <Input id="cnpj" value={empresaIdentificador} onChange={(e) => setEmpresaIdentificador(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address">EndereÃ§o</Label>
+                <Label htmlFor="address">Endereço</Label>
                 <Input id="address" value={empresaEndereco} onChange={(e) => setEmpresaEndereco(e.target.value)} />
               </div>
               <div className="space-y-2">
@@ -276,7 +277,7 @@ export default function Configuracoes() {
                 <Input id="city" value={empresaCidade} onChange={(e) => setEmpresaCidade(e.target.value)} />
               </div>
             </div>
-            <Button onClick={handleSaveCompany} className="gradient-primary" disabled={loading}>Salvar AlteraÃ§Ãµes</Button>
+            <Button onClick={handleSaveCompany} className="gradient-primary" disabled={loading}>Salvar Alterações</Button>
           </CardContent>
         </Card>
         </TabsContent>
@@ -295,33 +296,33 @@ export default function Configuracoes() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Alertas de obras por e-mail</p>
-                <p className="text-sm text-muted-foreground">Receba atualizaÃ§Ãµes sobre suas obras</p>
+                <p className="text-sm text-muted-foreground">Receba atualizações sobre suas obras</p>
               </div>
               <Switch 
                 checked={notificacoes.emailObras}
-                onCheckedChange={(checked) => setNotificacoes({...notificacoes, emailObras: checked})}
+                onCheckedChange={(checked) => void autoSaveNotifications({...notificacoes, emailObras: checked})}
               />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Alertas de orÃ§amento</p>
+                <p className="font-medium">Alertas de orçamento</p>
                 <p className="text-sm text-muted-foreground">Quando houver estouro de budget</p>
               </div>
               <Switch 
                 checked={notificacoes.alertasOrcamento}
-                onCheckedChange={(checked) => setNotificacoes({...notificacoes, alertasOrcamento: checked})}
+                onCheckedChange={(checked) => void autoSaveNotifications({...notificacoes, alertasOrcamento: checked})}
               />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">RelatÃ³rios semanais</p>
+                <p className="font-medium">Relatórios semanais</p>
                 <p className="text-sm text-muted-foreground">Resumo semanal por e-mail</p>
               </div>
               <Switch 
                 checked={notificacoes.relatoriosSemanais}
-                onCheckedChange={(checked) => setNotificacoes({...notificacoes, relatoriosSemanais: checked})}
+                onCheckedChange={(checked) => void autoSaveNotifications({...notificacoes, relatoriosSemanais: checked})}
               />
             </div>
             <Separator />
@@ -332,23 +333,21 @@ export default function Configuracoes() {
               </div>
               <Switch 
                 checked={notificacoes.push}
-                onCheckedChange={(checked) => setNotificacoes({...notificacoes, push: checked})}
+                onCheckedChange={(checked) => void autoSaveNotifications({...notificacoes, push: checked})}
               />
             </div>
           </CardContent>
         </Card>
-        <div className="flex justify-end">
-          <Button onClick={handleSaveNotifications}>Salvar Preferências</Button>
-        </div>
+        <div className="flex justify-end text-sm text-muted-foreground pr-1">Preferências são salvas automaticamente</div>
         </TabsContent>
 
         <TabsContent value="personalizacao">
-        {/* PersonalizaÃ§Ã£o */}
+        {/* Personalização */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Palette className="h-5 w-5 text-primary" />
-              PersonalizaÃ§Ã£o de Interface
+              Personalização de Interface
             </CardTitle>
             <CardDescription>Ajuste tema e cores de destaque</CardDescription>
           </CardHeader>
@@ -371,8 +370,12 @@ export default function Configuracoes() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="orange">ðŸŠ Laranja Construtivo</SelectItem>
-                  <SelectItem value="blue">ðŸ”µ Azul TÃ©cnico</SelectItem>
+                  <SelectItem value="orange">Laranja Construtivo</SelectItem>
+                  <SelectItem value="blue">Azul Técnico</SelectItem>
+                  <SelectItem value="green">Verde Engenharia</SelectItem>
+                  <SelectItem value="violet">Violeta Criativo</SelectItem>
+                  <SelectItem value="teal">Turquesa Moderno</SelectItem>
+                  <SelectItem value="red">Vermelho Energia</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -381,24 +384,24 @@ export default function Configuracoes() {
         </TabsContent>
 
         <TabsContent value="integracoes">
-        {/* IntegraÃ§Ãµes */}
+        {/* Integrações */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Share2 className="h-5 w-5 text-primary" />
-              IntegraÃ§Ãµes
+              Integrações
             </CardTitle>
-            <CardDescription>Conecte com serviÃ§os externos</CardDescription>
+            <CardDescription>Conecte com serviços externos</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button variant="outline" className="w-full justify-start">
-              <span className="mr-2">ðŸ’¬</span> Integrar WhatsApp Business
+            <Button variant="outline" className="w-full justify-start gap-2">
+              <MessageCircle className="h-4 w-4" /> Integrar WhatsApp Business
             </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <span className="mr-2">ðŸ“„</span> Conectar Google Sheets
+            <Button variant="outline" className="w-full justify-start gap-2">
+              <FileSpreadsheet className="h-4 w-4" /> Conectar Google Sheets
             </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <span className="mr-2">â˜ï¸</span> Sincronizar Google Drive
+            <Button variant="outline" className="w-full justify-start gap-2">
+              <HardDrive className="h-4 w-4" /> Sincronizar Google Drive
             </Button>
           </CardContent>
         </Card>
@@ -410,9 +413,9 @@ export default function Configuracoes() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
-              SeguranÃ§a
+              Segurança
             </CardTitle>
-            <CardDescription>Altere sua senha e configuraÃ§Ãµes de seguranÃ§a</CardDescription>
+            <CardDescription>Altere sua senha e configurações de segurança</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -440,7 +443,7 @@ export default function Configuracoes() {
                 Convites
                 <Badge variant="secondary">{pendentes} pendentes</Badge>
               </CardTitle>
-              <CardDescription>Gerencie pedidos de acesso Ã  sua construtora</CardDescription>
+              <CardDescription>Gerencie pedidos de acesso à sua construtora</CardDescription>
             </CardHeader>
             <CardContent>
               {canModerateInvites ? (
@@ -481,7 +484,7 @@ export default function Configuracoes() {
                       <div key={c.id} className="flex items-center justify-between p-3 border rounded-md">
                         <div className="space-y-1">
                           <p className="font-medium">{c.email}</p>
-                          <p className="text-xs text-muted-foreground">Status: {c.status}{c.cargoSugerido ? ` â€¢ Cargo: ${c.cargoSugerido}` : ""}</p>
+                          <p className="text-xs text-muted-foreground">Status: {c.status}{c.cargoSugerido ? ` • Cargo: ${c.cargoSugerido}` : ""}</p>
                         </div>
                         {c.status === "pending" ? (
                           <div className="flex gap-2">
@@ -502,8 +505,4 @@ export default function Configuracoes() {
     </div>
   );
 }
-
-
-
-
 
