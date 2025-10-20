@@ -11,8 +11,9 @@ type InvitePayload = {
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+// Prefer user-provided secret without reserved prefix; fallback to system if available
 const SUPABASE_SERVICE_ROLE_KEY =
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  Deno.env.get("SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM_EMAIL =
   Deno.env.get("RESEND_FROM_EMAIL") ?? "convites@notificacoes.local";
@@ -177,4 +178,3 @@ serve(async (request) => {
 
   return respond(200, { status: "Notifications sent" });
 });
-
